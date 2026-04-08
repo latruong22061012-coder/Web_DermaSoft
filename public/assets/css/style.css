@@ -1,0 +1,385 @@
+/* 1. BIẾN MÀU SẮC & FONT CHỮ (VARIABLES) */
+
+:root {
+  --bs-primary: #0f5c4d; /* Xanh mòng két đậm - Chủ đạo */
+  --color-green: #2e8b57; /* Xanh lá - Điểm nhấn */
+  --color-light-mint: #ddf5ea; /* Mint nhạt - Nền xen kẽ */
+  --color-luxe-gold: #b88a28;
+  --color-luxe-gold-soft: #d7b66f;
+  --color-luxe-champagne: #f2e4c3;
+  --color-deep-ink: #123a31;
+
+  --font-heading: "Playfair Display", serif;
+  --font-body: "Montserrat", sans-serif;
+}
+
+body {
+  font-family: var(--font-body);
+  color: #333;
+  overflow-x: hidden; /* Ngăn cuộn ngang ngoài ý muốn */
+  background: linear-gradient(180deg, #fbfcfb 0%, #f6f9f7 100%);
+}
+
+/* Kiểu dáng Tiêu đề */
+h1,
+h2,
+h3,
+h4,
+h5,
+h6,
+.font-heading {
+  font-family: var(--font-heading);
+  color: var(--bs-primary);
+}
+
+.section-title {
+  font-size: 3rem;
+  font-weight: 700;
+  line-height: 1.2;
+  letter-spacing: -1px;
+  margin-bottom: 1.5rem;
+  text-shadow: 0 1px 0 rgba(255, 255, 255, 0.65);
+}
+
+/* 2. TIỆN ÍCH TÙY CHỈNH (CUSTOM UTILITIES)*/
+
+.bg-light-mint {
+  background-color: var(--color-light-mint);
+}
+
+.text-primary {
+  color: var(--bs-primary) !important;
+}
+.border-primary {
+  border-color: var(--color-green) !important;
+}
+
+/* Tùy chỉnh Nút bấm (Ghi đè mặc định của Bootstrap) */
+.btn-primary {
+  background: linear-gradient(
+    135deg,
+    var(--bs-primary),
+    var(--color-green),
+    rgba(184, 138, 40, 0.9)
+  );
+  border-color: rgba(15, 92, 77, 0.95);
+  transition: all 0.3s ease;
+  box-shadow: 0 8px 18px rgba(9, 49, 41, 0.2);
+}
+.btn-primary:hover {
+  background: linear-gradient(
+    135deg,
+    rgba(9, 64, 53, 0.98),
+    var(--bs-primary),
+    var(--color-luxe-gold)
+  );
+  border-color: rgba(9, 64, 53, 0.98);
+  transform: translateY(-2px); /* Hiệu ứng nảy nhẹ khi trỏ chuột */
+  box-shadow: 0 12px 24px rgba(9, 49, 41, 0.32);
+}
+
+.btn-outline-primary {
+  color: var(--bs-primary);
+  border-color: rgba(15, 92, 77, 0.72);
+  background: rgba(255, 255, 255, 0.72);
+  transition: all 0.3s ease;
+}
+.btn-outline-primary:hover {
+  background: linear-gradient(
+    135deg,
+    var(--bs-primary),
+    var(--color-luxe-gold)
+  );
+  color: #fff;
+  transform: translateY(-2px);
+  border-color: rgba(15, 92, 77, 0.98);
+  box-shadow: 0 10px 20px rgba(9, 49, 41, 0.28);
+}
+
+/* 3. THANH ĐIỀU HƯỚNG & LOGO NỔI BẬT */
+.navbar {
+  transition: all 0.3s ease;
+  padding-top: 0.2rem;
+  padding-bottom: 0.2rem;
+}
+
+.navbar.scrolled {
+  background-color: rgba(255, 255, 255, 0.98) !important;
+  backdrop-filter: blur(10px);
+  padding-top: 0rem;
+  padding-bottom: 0rem;
+  box-shadow: 0 10px 26px rgba(9, 49, 41, 0.12);
+  border-bottom: 1px solid rgba(184, 138, 40, 0.18);
+}
+
+.navbar .nav-link {
+  color: #4f665e;
+  position: relative;
+  transition: color 0.25s ease;
+}
+
+.navbar .nav-link::after {
+  content: "";
+  position: absolute;
+  left: 0.5rem;
+  right: 0.5rem;
+  bottom: 0.15rem;
+  height: 2px;
+  border-radius: 999px;
+  background: linear-gradient(90deg, var(--bs-primary), var(--color-luxe-gold));
+  transform: scaleX(0);
+  transform-origin: center;
+  transition: transform 0.25s ease;
+}
+
+.navbar .nav-link:hover,
+.navbar .nav-link:focus {
+  color: var(--bs-primary);
+}
+
+.navbar .nav-link:hover::after,
+.navbar .nav-link:focus::after {
+  transform: scaleX(1);
+}
+
+/* Logo DramaSoft nổi bật */
+.logo-wrapper {
+  position: relative;
+  display: inline-block;
+}
+
+.logo-img {
+  height: 90px;
+  aspect-ratio: 1 / 1;
+  border-radius: 50%;
+  object-fit: contain;
+  padding: 4px;
+  background: transparent;
+  box-shadow:
+    0 14px 30px rgba(9, 49, 41, 0.16),
+    0 6px 14px rgba(15, 92, 77, 0.18);
+  transition:
+    transform 0.35s ease,
+    box-shadow 0.35s ease,
+    background 0.35s ease;
+}
+
+.logo-wrapper:hover .logo-img {
+  transform: scale(1.06);
+  box-shadow:
+    0 18px 36px rgba(9, 49, 41, 0.2),
+    0 8px 18px rgba(15, 92, 77, 0.22);
+}
+
+.icon-link {
+  transition: color 0.3s;
+}
+.icon-link:hover i {
+  color: var(--color-green) !important;
+}
+
+/* 4. HIỆU ỨNG HOVER CHO HÌNH ẢNH */
+.image-wrapper {
+  overflow: hidden;
+  position: relative;
+  border-radius: 1rem;
+  border: 1px solid rgba(184, 138, 40, 0.18);
+  box-shadow: 0 14px 30px rgba(9, 49, 41, 0.12);
+}
+
+.image-wrapper::before {
+  content: "";
+  position: absolute;
+  inset: 0;
+  background: linear-gradient(
+    120deg,
+    rgba(255, 255, 255, 0) 0%,
+    rgba(255, 255, 255, 0.28) 38%,
+    rgba(255, 255, 255, 0) 72%
+  );
+  opacity: 0;
+  transform: translateX(-18%);
+  transition:
+    transform 0.7s ease,
+    opacity 0.7s ease;
+  pointer-events: none;
+  z-index: 2;
+}
+
+.image-wrapper::after {
+  content: "";
+  position: absolute;
+  inset: 0;
+  border: 1px solid rgba(184, 138, 40, 0.26);
+  border-radius: inherit;
+  pointer-events: none;
+  opacity: 0.65;
+  z-index: 2;
+}
+
+.image-wrapper img {
+  transition: transform 0.6s cubic-bezier(0.25, 0.46, 0.45, 0.94);
+  display: block;
+  border-radius: inherit;
+}
+
+.hover-zoom:hover img {
+  transform: scale(1.05); /* Zoom 5% khi trỏ chuột vào ảnh */
+}
+
+.hover-zoom:hover::before,
+.hover-zoom-slow:hover::before {
+  opacity: 1;
+  transform: translateX(12%);
+}
+
+#about,
+#consultation,
+#facilities {
+  background-image:
+    radial-gradient(
+      circle at 8% 12%,
+      rgba(184, 138, 40, 0.14),
+      rgba(184, 138, 40, 0) 36%
+    ),
+    radial-gradient(
+      circle at 92% 88%,
+      rgba(15, 92, 77, 0.14),
+      rgba(15, 92, 77, 0) 40%
+    );
+}
+
+#booking form {
+  border: 1px solid rgba(184, 138, 40, 0.24);
+  background: linear-gradient(
+    155deg,
+    rgba(255, 255, 255, 0.98),
+    rgba(242, 228, 195, 0.34)
+  );
+  box-shadow: 0 18px 34px rgba(9, 49, 41, 0.14);
+}
+
+#booking .form-control,
+#booking .form-select {
+  border-color: rgba(15, 92, 77, 0.34) !important;
+}
+
+#booking .form-control:focus,
+#booking .form-select:focus {
+  box-shadow: 0 0 0 0.25rem rgba(184, 138, 40, 0.18);
+  border-color: rgba(15, 92, 77, 0.9) !important;
+}
+
+.dropdown-menu {
+  border: 1px solid rgba(184, 138, 40, 0.2) !important;
+  box-shadow: 0 16px 28px rgba(9, 49, 41, 0.14) !important;
+  background: linear-gradient(
+    160deg,
+    rgba(255, 255, 255, 0.98),
+    rgba(242, 228, 195, 0.28)
+  );
+}
+
+.dropdown-item:hover,
+.dropdown-item:focus {
+  background: rgba(184, 138, 40, 0.16);
+  color: var(--bs-primary);
+}
+
+.hover-zoom-slow img {
+  transition: transform 10s ease; /* Zoom cực chậm, mượt mà cho Banner chính */
+}
+.hover-zoom-slow:hover img {
+  transform: scale(1.1);
+}
+
+#home .image-wrapper {
+  border: 0;
+  border-radius: 0;
+  box-shadow: none;
+}
+
+#home .image-wrapper::before,
+#home .image-wrapper::after {
+  display: none;
+}
+
+#about .image-wrapper,
+#doctor .image-wrapper,
+#consultation .image-wrapper,
+#process .image-wrapper,
+#facilities .image-wrapper,
+#products .image-wrapper,
+#booking .image-wrapper {
+  border-width: 1px;
+  border-color: rgba(184, 138, 40, 0.24);
+  box-shadow:
+    0 18px 36px rgba(9, 49, 41, 0.16),
+    0 6px 16px rgba(184, 138, 40, 0.16);
+}
+
+#about .image-wrapper,
+#consultation .image-wrapper,
+#facilities .image-wrapper,
+#products .image-wrapper {
+  transform: translateZ(0);
+  transition:
+    transform 0.4s ease,
+    box-shadow 0.4s ease,
+    border-color 0.3s ease,
+    border-radius 0.35s ease;
+}
+
+#about .image-wrapper:hover,
+#consultation .image-wrapper:hover,
+#facilities .image-wrapper:hover,
+#products .image-wrapper:hover {
+  transform: translateY(-4px) scale(1.01);
+  border-radius: 1.2rem;
+  border-color: rgba(184, 138, 40, 0.42);
+  box-shadow:
+    0 24px 42px rgba(9, 49, 41, 0.2),
+    0 10px 24px rgba(184, 138, 40, 0.22);
+}
+
+#doctor .image-wrapper,
+#process .image-wrapper,
+#booking .image-wrapper {
+  border-color: rgba(15, 92, 77, 0.28);
+}
+
+#doctor .image-wrapper::after,
+#process .image-wrapper::after,
+#booking .image-wrapper::after {
+  border-color: rgba(15, 92, 77, 0.26);
+}
+
+/* 5. FOOTER LÀM ĐẸP */
+.hover-primary {
+  transition: color 0.3s ease;
+}
+.hover-primary:hover {
+  color: var(
+    --bs-primary
+  ) !important; /* Đổi màu chữ xanh khi trỏ chuột ở Footer */
+}
+
+/* 6. RESPONSIVE (ĐIỀU CHỈNH CHO MOBILE/TABLET) */
+@media (max-width: 991px) {
+  .section-title {
+    font-size: 2.2rem;
+  }
+  .logo-img {
+    height: 65px;
+  } /* Thu nhỏ logo trên Mobile */
+  .image-wrapper {
+    border-radius: 0.9rem;
+  }
+  .navbar-collapse {
+    background: #fff;
+    padding: 1rem;
+    border-radius: 0.5rem;
+    box-shadow: 0 10px 15px rgba(0, 0, 0, 0.05);
+    margin-top: 10px;
+  }
+}

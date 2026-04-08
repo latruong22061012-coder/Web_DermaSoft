@@ -1,0 +1,8 @@
+{
+  "files.autoSave": "afterDelay",
+  "github.copilot.chat.additionalReadAccessPaths": ["", ""],
+  "github.copilot.chat.agent.autoFix": true,
+  "phpserver.phpPath": "C:\\xampp\\php\\php.exe",
+  "phpserver.port": 3000,
+  "php.validate.executablePath": "C:\\xampp\\php\\php.exe"
+}
