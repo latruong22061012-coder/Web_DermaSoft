@@ -125,33 +125,35 @@ class AdminApiController extends ApiController
         $offset = $this->getOffset($page, $limit);
         $search = $_GET['q'] ?? '';
 
-        $where = "WHERE nd.MaVaiTro = 4";
+        $where = "WHERE bn.IsDeleted = 0";
         $params = [];
 
         if (!empty($search)) {
-            $where .= " AND (nd.HoTen LIKE ? OR nd.SoDienThoai LIKE ? OR nd.Email LIKE ?)";
+            $where .= " AND (bn.HoTen LIKE ? OR bn.SoDienThoai LIKE ? OR nd.Email LIKE ?)";
             $params[] = "%{$search}%";
             $params[] = "%{$search}%";
             $params[] = "%{$search}%";
         }
 
         $countRow = Database::fetchOne(
-            "SELECT COUNT(*) as total FROM NguoiDung nd {$where}", $params
+            "SELECT COUNT(*) as total FROM BenhNhan bn
+             LEFT JOIN NguoiDung nd ON bn.SoDienThoai = nd.SoDienThoai AND nd.MaVaiTro = 4
+             {$where}", $params
         );
         $total = (int)($countRow['total'] ?? 0);
 
         $list = Database::fetchAll(
-            "SELECT nd.MaNguoiDung, nd.HoTen, nd.SoDienThoai, nd.Email,
-                    nd.TrangThaiTK, nd.NgayTao, nd.AnhDaiDien,
-                    bn.MaBenhNhan, bn.NgaySinh, bn.GioiTinh, bn.TienSuBenhLy,
+            "SELECT bn.MaBenhNhan, bn.HoTen, bn.SoDienThoai, bn.NgaySinh, 
+                    bn.GioiTinh, bn.TienSuBenhLy,
+                    nd.MaNguoiDung, nd.Email, nd.TrangThaiTK, nd.NgayTao, nd.AnhDaiDien,
                     tv.MaThanhVien, tv.DiemTichLuy,
                     h.TenHang, h.MauHangHex
-             FROM NguoiDung nd
-             LEFT JOIN BenhNhan bn ON nd.SoDienThoai = bn.SoDienThoai AND bn.IsDeleted = 0
+             FROM BenhNhan bn
+             LEFT JOIN NguoiDung nd ON bn.SoDienThoai = nd.SoDienThoai AND nd.MaVaiTro = 4
              LEFT JOIN ThanhVienInfo tv ON bn.MaBenhNhan = tv.MaBenhNhan
              LEFT JOIN HangThanhVien h ON tv.MaHang = h.MaHang
              {$where}
-             ORDER BY nd.NgayTao DESC
+             ORDER BY bn.MaBenhNhan DESC
              OFFSET ? ROWS FETCH NEXT ? ROWS ONLY",
             array_merge($params, [$offset, $limit])
         );

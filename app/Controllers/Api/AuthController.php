@@ -23,6 +23,9 @@ class AuthController extends ApiController
     {
         Auth::startSession();
 
+        // Rate limit: tối đa 5 lần login sai trong 5 phút
+        $this->checkRateLimit('login', 5, 300);
+
         // Lấy dữ liệu từ request
         $data = $this->getJSON();
 

@@ -33,10 +33,9 @@ class HangThanhVien extends Model
      */
     public static function getHangByDiem($diemTichLuy): array|false
     {
-        $sql = "SELECT * FROM HangThanhVien 
+        $sql = "SELECT TOP 1 * FROM HangThanhVien 
                 WHERE DiemToiThieu <= ? 
-                ORDER BY DiemToiThieu DESC 
-                LIMIT 1";
+                ORDER BY DiemToiThieu DESC";
         $result = self::queryOne($sql, [$diemTichLuy]);
         return $result ?: false;
     }

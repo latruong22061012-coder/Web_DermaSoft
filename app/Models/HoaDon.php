@@ -101,7 +101,6 @@ class HoaDon extends Model
         if (isset($data['TienThua'])) $updates['TienThua'] = $data['TienThua'];
         if (isset($data['PhuongThuc'])) $updates['PhuongThucThanhToan'] = $data['PhuongThuc'];
         if (isset($data['NgayThanhToan'])) $updates['NgayThanhToan'] = $data['NgayThanhToan'];
-        if (isset($data['GhiChu'])) $updates['GhiChu'] = $data['GhiChu'];
         
         // Đánh dấu là đã thanh toán
         $updates['TrangThai'] = 1;

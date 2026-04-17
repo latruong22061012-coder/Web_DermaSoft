@@ -16,6 +16,7 @@ $gioDongDisplay = $gioDong ? substr($gioDong, 0, 5) : '';
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="csrf-token" content="<?= htmlspecialchars(\App\Controllers\ApiController::generateCsrfToken()) ?>">
     <title>Hồ sơ cá nhân | <?= $tenPK ?></title>
     
     <link rel="preconnect" href="https://fonts.googleapis.com">
@@ -295,9 +296,10 @@ $gioDongDisplay = $gioDong ? substr($gioDong, 0, 5) : '';
                                 <div class="history-timeline">
                                     <?php
                                     $pkStatusMap = [
-                                        0 => ['label'=>'Chờ xử lý',  'class'=>'status-pending'],
-                                        1 => ['label'=>'Đã hoàn thành','class'=>'status-completed'],
-                                        2 => ['label'=>'Đã hủy',     'class'=>'status-cancelled'],
+                                        0 => ['label'=>'Chờ khám',      'class'=>'status-pending'],
+                                        1 => ['label'=>'Đang khám',     'class'=>'status-confirmed'],
+                                        2 => ['label'=>'Hoàn thành',    'class'=>'status-completed'],
+                                        3 => ['label'=>'Đã khám',       'class'=>'status-completed'],
                                     ];
                                     ?>
                                     <?php foreach ($historyRecords as $pk):
@@ -540,6 +542,7 @@ $gioDongDisplay = $gioDong ? substr($gioDong, 0, 5) : '';
     <script src="<?= defined('BASE_URL') ? BASE_URL : '/' ?>public/assets/vendor/bootstrap/js/bootstrap.bundle.min.js"></script>
     <script src="<?= defined('BASE_URL') ? BASE_URL : '/' ?>public/assets/vendor/aos/aos.js"></script>
     
+    <script src="<?= defined('BASE_URL') ? BASE_URL : '/' ?>public/assets/js/csrf.js"></script>
     <script src="<?= defined('BASE_URL') ? BASE_URL : '/' ?>public/assets/js/script.js"></script>
     <script src="<?= defined('BASE_URL') ? BASE_URL : '/' ?>public/assets/js/profile.js"></script>
 </body>

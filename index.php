@@ -55,17 +55,25 @@ require_once __DIR__ . '/app/Controllers/Api/BookingController.php';
 require_once __DIR__ . '/app/Controllers/Api/DanhGiaController.php';
 require_once __DIR__ . '/app/Controllers/AdminController.php';
 require_once __DIR__ . '/app/Controllers/Api/AdminApiController.php';
+require_once __DIR__ . '/app/Controllers/BacSiController.php';
+require_once __DIR__ . '/app/Controllers/Api/BacSiApiController.php';
+require_once __DIR__ . '/app/Controllers/LeTanController.php';
+require_once __DIR__ . '/app/Controllers/Api/LeTanApiController.php';
+
+// Khởi tạo session + CSRF token cho mọi request
+\App\Core\Auth::startSession();
+$csrfToken = \App\Controllers\ApiController::generateCsrfToken();
 
 // Bộ xử lý tuyến đường API
 // Bộ xử lý tuyến đường API
 $request_uri = $_SERVER['REQUEST_URI'] ?? '/';
 
-// Xóa đường dẫn cơ sở /DarmaSoft nếu có
-if (strpos($request_uri, '/DarmaSoft') === 0) {
-    $request_uri = substr($request_uri, strlen('/DarmaSoft'));
+// Xóa đường dẫn cơ sở /DermaSoft nếu có
+if (strpos($request_uri, '/DermaSoft') === 0) {
+    $request_uri = substr($request_uri, strlen('/DermaSoft'));
 }
 
-// Cũng xử lý chỉ /api* mà không có DarmaSoft
+// Cũng xử lý chỉ /api* mà không có DermaSoft
 if (empty($request_uri) || $request_uri === '/') {
     $request_uri = $_GET['route'] ?? 'home';
 }
@@ -78,11 +86,13 @@ if (strpos($request_uri, '/api/') === 0) {
         handleApiRoute($request_uri);
     } catch (\Throwable $e) {
         ob_end_clean();
+        // Log chi tiết lỗi vào file, chỉ trả message chung cho client
+        error_log('[API Error] ' . $e->getMessage() . ' in ' . $e->getFile() . ':' . $e->getLine());
         header('Content-Type: application/json; charset=utf-8');
         http_response_code(500);
         echo json_encode([
             'status' => 500,
-            'message' => 'Server Error: ' . $e->getMessage(),
+            'message' => 'Đã xảy ra lỗi hệ thống. Vui lòng thử lại sau.',
             'data' => null
         ], JSON_UNESCAPED_UNICODE);
     }
@@ -99,11 +109,12 @@ if (strpos($route, 'api/') === 0) {
         handleApiRoute('/' . $route);
     } catch (\Throwable $e) {
         ob_end_clean();
+        error_log('[API Error] ' . $e->getMessage() . ' in ' . $e->getFile() . ':' . $e->getLine());
         header('Content-Type: application/json; charset=utf-8');
         http_response_code(500);
         echo json_encode([
             'status' => 500,
-            'message' => 'Server Error: ' . $e->getMessage(),
+            'message' => 'Đã xảy ra lỗi hệ thống. Vui lòng thử lại sau.',
             'data' => null
         ], JSON_UNESCAPED_UNICODE);
     }
@@ -150,6 +161,36 @@ switch ($route) {
         (new AdminController())->danhGia();
         break;
 
+    // ═══ BÁC SĨ ROUTES ═══
+    case 'bacsi':
+    case 'bacsi/dashboard':
+        (new BacSiController())->dashboard();
+        break;
+    case 'bacsi/lich-lam-viec':
+        (new BacSiController())->lichLamViec();
+        break;
+    case 'bacsi/benh-nhan':
+        (new BacSiController())->benhNhan();
+        break;
+    case 'bacsi/luong':
+        (new BacSiController())->luong();
+        break;
+
+    // ═══ LỄ TÂN ROUTES ═══
+    case 'letan':
+    case 'letan/dashboard':
+        (new LeTanController())->dashboard();
+        break;
+    case 'letan/lich-hen':
+        (new LeTanController())->lichHen();
+        break;
+    case 'letan/lich-lam-viec':
+        (new LeTanController())->lichLamViec();
+        break;
+    case 'letan/luong':
+        (new LeTanController())->luong();
+        break;
+
     default:
         http_response_code(404);
         echo '404 - Trang khong ton tai';
@@ -190,6 +231,8 @@ function handleApiRoute($uri)
     $routes = [
         'auth' => 'App\Controllers\Api\AuthController',
         'admin' => 'App\Controllers\Api\AdminApiController',
+        'bacsi' => 'App\Controllers\Api\BacSiApiController',
+        'letan' => 'App\Controllers\Api\LeTanApiController',
         'profile' => 'App\Controllers\Api\ProfileApiController',
         'booking' => 'App\Controllers\Api\BookingController',
         'lichhens' => 'App\Controllers\Api\LichHenController',
@@ -332,6 +375,46 @@ function handleApiRoute($uri)
         return;
     }
 
+    // ═══ BÁC SĨ API ROUTES ═══
+    if ($resource === 'bacsi') {
+        if ($method === 'stats' && $http_method === 'GET') {
+            $controller->stats();
+        } elseif ($method === 'lich-lam-viec' && $http_method === 'GET') {
+            $controller->lichLamViec();
+        } elseif ($method === 'benh-nhan' && $http_method === 'GET') {
+            $controller->dsBenhNhan();
+        } elseif ($method === 'luong' && $http_method === 'GET') {
+            $controller->luong();
+        } elseif ($method === 'danh-gia' && $http_method === 'GET') {
+            $controller->danhGia();
+        } elseif ($method === 'thong-ke-bn' && $http_method === 'GET') {
+            $controller->thongKeBN();
+        } else {
+            http_response_code(404);
+            echo json_encode(['status' => 404, 'message' => 'BacSi endpoint không tìm thấy', 'data' => null]);
+        }
+        return;
+    }
+
+    // ═══ LỄ TÂN API ROUTES ═══
+    if ($resource === 'letan') {
+        if ($method === 'stats' && $http_method === 'GET') {
+            $controller->stats();
+        } elseif ($method === 'lich-hen' && $http_method === 'GET') {
+            $controller->dsLichHen();
+        } elseif ($method === 'lich-lam-viec' && $http_method === 'GET') {
+            $controller->lichLamViec();
+        } elseif ($method === 'luong' && $http_method === 'GET') {
+            $controller->luong();
+        } elseif ($method === 'thong-ke-lh' && $http_method === 'GET') {
+            $controller->thongKeLH();
+        } else {
+            http_response_code(404);
+            echo json_encode(['status' => 404, 'message' => 'LeTan endpoint không tìm thấy', 'data' => null]);
+        }
+        return;
+    }
+
     if ($resource === 'lichhens' || $resource === 'lichhen') {
         routeResourceController($controller, $method, $id, $http_method);
         return;
@@ -340,6 +423,8 @@ function handleApiRoute($uri)
     if ($resource === 'booking') {
         if ($method === 'create' && $http_method === 'POST') {
             $controller->create();
+        } elseif ($method === 'doctors' && $http_method === 'GET') {
+            $controller->doctors();
         } else {
             http_response_code(404);
             echo json_encode(['status' => 404, 'message' => 'Booking endpoint không tìm thấy', 'data' => null]);

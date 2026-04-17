@@ -18,9 +18,17 @@ class ProfileController extends Controller
             exit;
         }
 
-        // Admin truy cập profile → chuyển sang dashboard
+        // Chuyển hướng theo vai trò → dashboard tương ứng
         if (Auth::hasRole(1)) {
             header('Location: index.php?route=admin/dashboard');
+            exit;
+        }
+        if (Auth::hasRole(2)) {
+            header('Location: index.php?route=bacsi/dashboard');
+            exit;
+        }
+        if (Auth::hasRole(3)) {
+            header('Location: index.php?route=letan/dashboard');
             exit;
         }
 

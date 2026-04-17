@@ -13,6 +13,7 @@ namespace App\Controllers\Api;
 
 use App\Controllers\ApiController;
 use App\Core\Auth;
+use App\Core\Database;
 use App\Models\ThanhVienInfo;
 use App\Models\HangThanhVien;
 use App\Models\BenhNhan;
@@ -234,25 +235,23 @@ class ThanhVienInfoController extends ApiController
         }
 
         $member = ThanhVienInfo::getById((int)$id);
-        $currentPoints = (int)$member['DiemThuong'];
+        $currentPoints = (int)$member['DiemTichLuy'];
         $pointsToAdd = (int)$data['points_add'];
 
         // Cộng điểm
         $newPoints = $currentPoints + $pointsToAdd;
 
-        // Tính cấp thành viên dựa trên điểm
-        // Bronze: 0-4999, Silver: 5000-9999, Gold: 10000+
-        $newTier = 1;  // Bronze
-        if ($newPoints >= 10000) {
-            $newTier = 3;  // Gold
-        } elseif ($newPoints >= 5000) {
-            $newTier = 2;  // Silver
-        }
+        // Xác định hạng mới theo điểm (tra bảng HangThanhVien)
+        $hangMoi = Database::fetchOne(
+            "SELECT TOP 1 MaHang FROM HangThanhVien WHERE DiemToiThieu <= ? ORDER BY DiemToiThieu DESC",
+            [$newPoints]
+        );
+        $maHang = $hangMoi ? (int)$hangMoi['MaHang'] : (int)$member['MaHang'];
 
         // Cập nhật
         ThanhVienInfo::update((int)$id, [
-            'DiemThuong' => $newPoints,
-            'MaHangThanhVien' => $newTier
+            'DiemTichLuy' => $newPoints,
+            'MaHang' => $maHang
         ]);
 
         // Ghi log
@@ -288,13 +287,13 @@ class ThanhVienInfoController extends ApiController
         $member = ThanhVienInfo::getById((int)$id);
         
         // Lấy thông tin cấp
-        $tier = HangThanhVien::getById($member['MaHangThanhVien']);
+        $tier = HangThanhVien::getById($member['MaHang']);
 
         $response = [
             'member_id' => $member['MaBenhNhan'],
-            'points' => (int)$member['DiemThuong'],
+            'points' => (int)$member['DiemTichLuy'],
             'tier' => $tier,
-            'registered_date' => $member['NgayDangKy']
+            'registered_date' => $member['NgayTaoTaiKhoan']
         ];
 
         $this->success($response, 'Lấy thông tin điểm thành công');

@@ -25,6 +25,69 @@ abstract class ApiController
         // Base constructor - các class con có thể override
     }
 
+    // ═══ CSRF PROTECTION ═══
+
+    /**
+     * Tạo CSRF token và lưu vào session
+     */
+    public static function generateCsrfToken(): string
+    {
+        Auth::startSession();
+        if (empty($_SESSION['csrf_token'])) {
+            $_SESSION['csrf_token'] = bin2hex(random_bytes(32));
+        }
+        return $_SESSION['csrf_token'];
+    }
+
+    /**
+     * Kiểm tra CSRF token từ header X-CSRF-Token
+     * Gọi method này trong các API endpoint thay đổi dữ liệu (POST/PUT/DELETE)
+     */
+    protected function requireCsrf(): void
+    {
+        Auth::startSession();
+        $token = $_SERVER['HTTP_X_CSRF_TOKEN'] ?? '';
+        if (empty($token) || !hash_equals($_SESSION['csrf_token'] ?? '', $token)) {
+            $this->error('CSRF token không hợp lệ', null, 403);
+        }
+    }
+
+    // ═══ RATE LIMITING ═══
+
+    /**
+     * Kiểm tra rate limit dựa trên IP + action key
+     * @param string $action Tên hành động (ví dụ: 'login', 'otp_send')
+     * @param int $maxAttempts Số lần tối đa
+     * @param int $windowSeconds Thời gian reset (đơn vị giây)
+     */
+    protected function checkRateLimit(string $action, int $maxAttempts = 5, int $windowSeconds = 300): void
+    {
+        Auth::startSession();
+        $ip = $_SERVER['REMOTE_ADDR'] ?? '0.0.0.0';
+        $key = 'rate_limit_' . $action . '_' . md5($ip);
+
+        $record = $_SESSION[$key] ?? null;
+        $now = time();
+
+        // Reset nếu hết thời gian window
+        if (!$record || ($now - $record['start']) > $windowSeconds) {
+            $_SESSION[$key] = ['count' => 1, 'start' => $now];
+            return;
+        }
+
+        // Tăng đếm
+        $_SESSION[$key]['count']++;
+
+        if ($_SESSION[$key]['count'] > $maxAttempts) {
+            $retryAfter = $windowSeconds - ($now - $record['start']);
+            $this->error(
+                "Quá nhiều yêu cầu. Vui lòng thử lại sau {$retryAfter} giây.",
+                null,
+                429
+            );
+        }
+    }
+
     /**
      * Định dạng chung cho API response
      */

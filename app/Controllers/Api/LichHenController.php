@@ -14,6 +14,7 @@ namespace App\Controllers\Api;
 
 use App\Controllers\ApiController;
 use App\Core\Auth;
+use App\Core\Database;
 use App\Models\LichHen;
 use App\Models\BenhNhan;
 
@@ -246,6 +247,11 @@ class LichHenController extends ApiController
         // Cập nhật trạng thái
         LichHen::updateStatus((int)$id, (int)$data['status']);
 
+        // Nếu xác nhận (status=1) và có bác sĩ → tự tạo PhieuKham chờ khám
+        if ((int)$data['status'] === 1) {
+            $this->autoCreatePhieuKham((int)$id);
+        }
+
         $this->logAccess("Update appointment status - ID: $id, Status: {$data['status']}");
 
         $appointment = LichHen::getById((int)$id);
@@ -274,6 +280,9 @@ class LichHenController extends ApiController
         }
 
         LichHen::confirm((int)$id);
+
+        // Tự tạo PhieuKham chờ khám nếu có bác sĩ
+        $this->autoCreatePhieuKham((int)$id);
 
         $this->logAccess("Confirm appointment - ID: $id");
 
@@ -331,6 +340,46 @@ class LichHenController extends ApiController
         } catch (\Exception $e) {
             error_log('Lỗi hủy lịch hẹn #' . $id . ': ' . $e->getMessage());
             $this->internalError('Không thể hủy lịch hẹn. Vui lòng thử lại.');
+        }
+    }
+
+    /**
+     * Tự tạo PhieuKham (TrangThai=0) khi lịch hẹn được xác nhận và có bác sĩ
+     * → Cập nhật KPI "Chờ khám hôm nay" trên Dashboard BacSi
+     */
+    private function autoCreatePhieuKham(int $maLichHen): void
+    {
+        try {
+            $lichHen = LichHen::getById($maLichHen);
+            if (!$lichHen) return;
+
+            $maNguoiDung = $lichHen['MaNguoiDung'] ?? null;
+            $maBenhNhan  = $lichHen['MaBenhNhan'] ?? null;
+
+            // Chỉ tạo nếu lịch hẹn có bác sĩ được chỉ định
+            if (!$maNguoiDung || !$maBenhNhan) return;
+
+            // Kiểm tra đã có PhieuKham cho lịch hẹn này chưa (tránh trùng)
+            $existing = Database::fetchOne(
+                "SELECT MaPhieuKham FROM PhieuKham WHERE MaLichHen = ? AND IsDeleted = 0",
+                [$maLichHen]
+            );
+            if ($existing) return;
+
+            // Tạo PhieuKham chờ khám
+            Database::execute(
+                "INSERT INTO PhieuKham (MaBenhNhan, MaNguoiDung, MaLichHen, NgayKham, TrieuChung, ChanDoan, TrangThai, GhiChu, IsDeleted)
+                 VALUES (?, ?, ?, ?, N'', N'', 0, ?, 0)",
+                [
+                    (int)$maBenhNhan,
+                    (int)$maNguoiDung,
+                    $maLichHen,
+                    $lichHen['ThoiGianHen'],
+                    $lichHen['GhiChu'] ?? '',
+                ]
+            );
+        } catch (\Exception $e) {
+            error_log('Lỗi tự tạo PhieuKham cho LichHen #' . $maLichHen . ': ' . $e->getMessage());
         }
     }
 }

@@ -6,6 +6,7 @@ $tenPK = htmlspecialchars($phongKham['tenPhongKham'] ?? 'DarmaSoft Clinic', ENT_
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="csrf-token" content="<?= htmlspecialchars(\App\Controllers\ApiController::generateCsrfToken()) ?>">
     <title>Đăng nhập | <?= $tenPK ?></title>
 
     <link rel="preconnect" href="https://fonts.googleapis.com">
@@ -173,6 +174,7 @@ $tenPK = htmlspecialchars($phongKham['tenPhongKham'] ?? 'DarmaSoft Clinic', ENT_
     </main>
 
     <script src="<?= defined('BASE_URL') ? BASE_URL : '/' ?>public/assets/vendor/bootstrap/js/bootstrap.bundle.min.js"></script>
+    <script src="<?= defined('BASE_URL') ? BASE_URL : '/' ?>public/assets/js/csrf.js"></script>
     <script src="<?= defined('BASE_URL') ? BASE_URL : '/' ?>public/assets/js/otp-api-handler.js"></script>
     <script>
     (function () {
@@ -480,9 +482,13 @@ $tenPK = htmlspecialchars($phongKham['tenPhongKham'] ?? 'DarmaSoft Clinic', ENT_
             
             if (result.success) {
                 // ✅ Login thành công - chuyển hướng theo vai trò
-                var roleId = result.user ? (result.user.maVaiTro || result.user.role_id) : null;
-                if (parseInt(roleId) === 1) {
+                var roleId = result.user ? parseInt(result.user.maVaiTro || result.user.role_id) : null;
+                if (roleId === 1) {
                     window.location.href = 'index.php?route=admin/dashboard';
+                } else if (roleId === 2) {
+                    window.location.href = 'index.php?route=bacsi/dashboard';
+                } else if (roleId === 3) {
+                    window.location.href = 'index.php?route=letan/dashboard';
                 } else {
                     window.location.href = 'index.php?route=profile';
                 }

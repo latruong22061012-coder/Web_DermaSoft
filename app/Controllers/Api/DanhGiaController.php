@@ -57,7 +57,8 @@ class DanhGiaController extends ApiController
             $this->error('Phiếu khám không tồn tại hoặc không thuộc về bạn');
             return;
         }
-        if ((int)$pk['TrangThai'] !== 1) {
+        $pkTT = (int)$pk['TrangThai'];
+        if ($pkTT !== 1 && $pkTT !== 3) {
             $this->error('Chỉ có thể đánh giá phiếu khám đã hoàn thành');
             return;
         }

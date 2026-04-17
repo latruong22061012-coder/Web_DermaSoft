@@ -1,0 +1,17 @@
+# Environment variables (chứa credentials)
+.env
+
+# Config files chứa credentials
+app/Config/email_config.php
+app/Config/sms_config.php
+
+# Error logs
+error.log
+
+# IDE
+.vscode/
+.idea/
+
+# OS
+Thumbs.db
+.DS_Store

@@ -19,6 +19,7 @@ $gioDongDisplay = $gioDong ? substr($gioDong, 0, 5) : '';
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="csrf-token" content="<?= htmlspecialchars(\App\Controllers\ApiController::generateCsrfToken()) ?>">
     <title><?= $tenPK ?> - Nâng Tầm Vẻ Đẹp Chuẩn Y Khoa</title>
     
     <link rel="preconnect" href="https://fonts.googleapis.com">
@@ -271,25 +272,49 @@ $gioDongDisplay = $gioDong ? substr($gioDong, 0, 5) : '';
                                         class="form-select form-select-lg border-primary border-opacity-50"
                                         required>
                                     <option value="">-- Chọn giờ --</option>
-                                    <option value="08:00">08:00 sáng</option>
-                                    <option value="08:30">08:30 sáng</option>
-                                    <option value="09:00">09:00 sáng</option>
-                                    <option value="09:30">09:30 sáng</option>
-                                    <option value="10:00">10:00 sáng</option>
-                                    <option value="10:30">10:30 sáng</option>
-                                    <option value="11:00">11:00 sáng</option>
-                                    <option value="11:30">11:30 sáng</option>
-                                    <option value="13:00">13:00 chiều</option>
-                                    <option value="13:30">13:30 chiều</option>
-                                    <option value="14:00">14:00 chiều</option>
-                                    <option value="14:30">14:30 chiều</option>
-                                    <option value="15:00">15:00 chiều</option>
-                                    <option value="15:30">15:30 chiều</option>
-                                    <option value="16:00">16:00 chiều</option>
-                                    <option value="16:30">16:30 chiều</option>
+                                    <?php
+                                    // Lấy giờ hoạt động từ ThongTinPhongKham, slot cuối trước giờ đóng cửa 1 tiếng
+                                    $openH = 8; $openM = 0; $closeH = 17; $closeM = 0;
+                                    if (!empty($phongKham['gioMoCua'])) {
+                                        $parts = explode(':', $phongKham['gioMoCua']);
+                                        $openH = (int)$parts[0]; $openM = (int)($parts[1] ?? 0);
+                                    }
+                                    if (!empty($phongKham['gioDongCua'])) {
+                                        $parts = explode(':', $phongKham['gioDongCua']);
+                                        $closeH = (int)$parts[0]; $closeM = (int)($parts[1] ?? 0);
+                                    }
+                                    // Slot cuối = giờ đóng cửa - 1 tiếng
+                                    $lastSlotMin = ($closeH * 60 + $closeM) - 60;
+                                    $startMin = $openH * 60 + $openM;
+                                    for ($m = $startMin; $m <= $lastSlotMin; $m += 30) {
+                                        // Bỏ qua giờ nghỉ trưa 12:00 - 12:59
+                                        if ($m >= 720 && $m < 780) continue;
+                                        $h = intdiv($m, 60);
+                                        $mi = $m % 60;
+                                        $val = sprintf('%02d:%02d', $h, $mi);
+                                        $label = $val . ($h < 12 ? ' sáng' : ' chiều');
+                                        echo "<option value=\"{$val}\">{$label}</option>\n";
+                                    }
+                                    ?>
                                 </select>
                                 <div class="invalid-feedback">Vui lòng chọn giờ hẹn.</div>
                             </div>
+                            <!-- Chọn bác sĩ -->
+                            <div class="col-12" id="doctorListContainer" style="display:none;">
+                                <label class="form-label fw-medium text-muted small">
+                                    <i class="bi bi-person-badge me-1"></i>Chọn bác sĩ <span class="text-danger">*</span>
+                                </label>
+                                <div id="doctorListLoading" class="text-center py-3 d-none">
+                                    <span class="spinner-border spinner-border-sm text-primary me-2"></span>Đang tải danh sách bác sĩ...
+                                </div>
+                                <div id="doctorListEmpty" class="alert alert-info py-2 d-none">
+                                    <i class="bi bi-info-circle me-1"></i>Không có bác sĩ nào làm việc vào ngày này.
+                                </div>
+                                <div id="doctorCards" class="row g-2"></div>
+                                <input type="hidden" id="bookingDoctor" name="maNguoiDung" value="">
+                                <div id="doctorInvalid" class="text-danger small mt-1 d-none">Vui lòng chọn bác sĩ.</div>
+                            </div>
+
                             <div class="col-12">
                                 <label class="form-label fw-medium text-muted small" for="bookingNote">Ghi chú (không bắt buộc)</label>
                                 <textarea id="bookingNote" name="ghiChu"
@@ -386,6 +411,7 @@ $gioDongDisplay = $gioDong ? substr($gioDong, 0, 5) : '';
         window._BOOKING_USER_PHONE = <?= json_encode($currentUser['SoDienThoai'] ?? '', JSON_UNESCAPED_UNICODE) ?>;
     </script>
     <?php endif; ?>
+    <script src="<?= defined('BASE_URL') ? BASE_URL : '/' ?>public/assets/js/csrf.js"></script>
     <script src="<?= defined('BASE_URL') ? BASE_URL : '/' ?>public/assets/js/script.js"></script>
 </body>
 </html>

@@ -6,7 +6,8 @@
  * Luồng bảo mật:
  * - User đã đăng nhập: dùng HoTen/SĐT từ session (không cho sửa)
  * - Khách vãng lai: nếu SĐT thuộc tài khoản đã đăng ký → từ chối, yêu cầu đăng nhập
- * - Rate limit: tối đa 5 lịch hẹn chờ xử lý / SĐT
+ * - Rate limit: tối đa 5 lịch hẹn chờ xử lý tương lai / SĐT
+ * - Auto-cancel: tự động hủy lịch hẹn chưa xác nhận đã qua ngày
  */
 
 namespace App\Controllers\Api;
@@ -14,6 +15,7 @@ namespace App\Controllers\Api;
 use App\Controllers\ApiController;
 use App\Core\Auth;
 use App\Core\Database;
+use App\Models\ThongTinPhongKham;
 
 class BookingController extends ApiController
 {
@@ -99,16 +101,93 @@ class BookingController extends ApiController
             return;
         }
 
+        // Validate giờ hẹn theo khung giờ hoạt động phòng khám (trước giờ đóng cửa 1 tiếng)
+        $pkModel = new ThongTinPhongKham();
+        $pkInfo = $pkModel->getInfo();
+        $openTime = $pkInfo['GioMoCua'] ?? '08:00:00';
+        $closeTime = $pkInfo['GioDongCua'] ?? '17:00:00';
+        $openParts = explode(':', $openTime);
+        $closeParts = explode(':', $closeTime);
+        $openMin = (int)$openParts[0] * 60 + (int)($openParts[1] ?? 0);
+        $closeMin = (int)$closeParts[0] * 60 + (int)($closeParts[1] ?? 0);
+        $lastSlotMin = $closeMin - 60; // trước 1 tiếng
+
+        $henH = (int)$dt->format('H');
+        $henM = (int)$dt->format('i');
+        $henMin = $henH * 60 + $henM;
+
+        if ($henMin < $openMin || $henMin > $lastSlotMin) {
+            $openLabel = sprintf('%02d:%02d', intdiv($openMin, 60), $openMin % 60);
+            $lastLabel = sprintf('%02d:%02d', intdiv($lastSlotMin, 60), $lastSlotMin % 60);
+            $this->error("Giờ hẹn phải trong khung {$openLabel} - {$lastLabel} (trước giờ đóng cửa 1 tiếng)", null, 400);
+            return;
+        }
+
+        // Bỏ qua giờ nghỉ trưa 12:00 - 12:59
+        if ($henMin >= 720 && $henMin < 780) {
+            $this->error('Không thể đặt lịch trong giờ nghỉ trưa (12:00 - 13:00)', null, 400);
+            return;
+        }
+
         $ghiChu = isset($data['ghiChu']) ? trim($data['ghiChu']) : null;
         if ($ghiChu === '') $ghiChu = null;
 
-        // Rate limit: tối đa 5 lịch hẹn đang chờ xử lý / SĐT
+        // Xử lý bác sĩ được chọn (nếu có)
+        $maNguoiDung = isset($data['maNguoiDung']) && $data['maNguoiDung'] !== '' ? (int)$data['maNguoiDung'] : null;
+
+        if ($maNguoiDung !== null) {
+            // Validate bác sĩ tồn tại và có vai trò Bác Sĩ
+            $doctor = Database::fetchOne(
+                "SELECT MaNguoiDung FROM NguoiDung WHERE MaNguoiDung = ? AND MaVaiTro = 2 AND TrangThaiTK = 1 AND IsDeleted = 0",
+                [$maNguoiDung]
+            );
+            if (!$doctor) {
+                $this->error('Bác sĩ không hợp lệ hoặc không còn hoạt động.', null, 400);
+                return;
+            }
+
+            // Validate bác sĩ có ca làm việc trong ngày đã chọn
+            $shift = Database::fetchOne(
+                "SELECT pc.MaCa FROM PhanCongCa pc WHERE pc.MaNguoiDung = ? AND pc.NgayLamViec = ?",
+                [$maNguoiDung, $dt->format('Y-m-d')]
+            );
+            if (!$shift) {
+                $this->error('Bác sĩ này không có ca làm việc vào ngày đã chọn.', null, 400);
+                return;
+            }
+
+            // Giới hạn 8 bệnh nhân / bác sĩ / ngày
+            $bnCount = Database::fetchOne(
+                "SELECT COUNT(*) AS cnt FROM LichHen WHERE MaNguoiDung = ? AND CAST(ThoiGianHen AS DATE) = ? AND TrangThai IN (0, 1)",
+                [$maNguoiDung, $dt->format('Y-m-d')]
+            );
+            if ($bnCount && (int)$bnCount['cnt'] >= 8) {
+                $this->error('Bác sĩ đã đầy lịch trong ngày này (tối đa 8 bệnh nhân). Vui lòng chọn bác sĩ khác.', null, 400);
+                return;
+            }
+        }
+
+        // Tự động hủy lịch hẹn chưa xác nhận (TrangThai=0) đã qua ngày
+        try {
+            Database::query(
+                "UPDATE LichHen SET TrangThai = 3
+                 WHERE TrangThai = 0
+                   AND MaBenhNhan IN (SELECT bn.MaBenhNhan FROM BenhNhan bn WHERE bn.SoDienThoai = ?)
+                   AND CAST(ThoiGianHen AS DATE) < CAST(GETDATE() AS DATE)",
+                [$phone]
+            );
+        } catch (\Exception $e) {
+            error_log('Lỗi tự động hủy lịch hẹn quá hạn: ' . $e->getMessage());
+        }
+
+        // Rate limit: tối đa 5 lịch hẹn đang chờ xử lý / SĐT (chỉ đếm tương lai)
         try {
             $pendingCount = Database::fetchOne(
                 "SELECT COUNT(*) AS cnt
                  FROM LichHen lh
                  JOIN BenhNhan bn ON lh.MaBenhNhan = bn.MaBenhNhan
-                 WHERE bn.SoDienThoai = ? AND lh.TrangThai IN (0, 1)",
+                 WHERE bn.SoDienThoai = ? AND lh.TrangThai IN (0, 1)
+                   AND CAST(lh.ThoiGianHen AS DATE) >= CAST(GETDATE() AS DATE)",
                 [$phone]
             );
             if ($pendingCount && (int)$pendingCount['cnt'] >= 5) {
@@ -140,12 +219,13 @@ class BookingController extends ApiController
 
         try {
             $result = Database::fetchOne(
-                "EXEC SP_DatLichHen @HoTen = ?, @SoDienThoai = ?, @ThoiGianHen = ?, @GhiChu = ?",
+                "EXEC SP_DatLichHen @HoTen = ?, @SoDienThoai = ?, @ThoiGianHen = ?, @GhiChu = ?, @MaNguoiDung = ?",
                 [
                     trim($data['hoTen']),
                     $phone,
                     $dt->format('Y-m-d H:i:s'),
                     $ghiChu,
+                    $maNguoiDung,
                 ]
             );
 
@@ -159,5 +239,43 @@ class BookingController extends ApiController
             error_log('Lỗi đặt lịch: ' . $e->getMessage());
             $this->error('Lỗi hệ thống khi đặt lịch. Vui lòng thử lại sau.', null, 500);
         }
+    }
+
+    /**
+     * GET /api/booking/doctors?ngay=2026-04-17
+     * Trả DS bác sĩ có ca làm việc ngày đã chọn + số BN hiện tại (giới hạn 8)
+     */
+    public function doctors(): void
+    {
+        $ngay = $_GET['ngay'] ?? '';
+        if (!preg_match('/^\d{4}-\d{2}-\d{2}$/', $ngay)) {
+            $this->error('Ngày không hợp lệ', null, 400);
+            return;
+        }
+
+        // Lấy bác sĩ có phân công ca trong ngày + đếm BN đã hẹn
+        $doctors = Database::fetchAll(
+            "SELECT nd.MaNguoiDung, nd.HoTen,
+                    c.MaCa, c.TenCa, c.GioBatDau, c.GioKetThuc,
+                    ISNULL(bn_count.SoBN, 0) AS SoBN
+             FROM PhanCongCa pc
+             INNER JOIN NguoiDung nd ON pc.MaNguoiDung = nd.MaNguoiDung
+             INNER JOIN CaLamViec c ON pc.MaCa = c.MaCa
+             LEFT JOIN (
+                 SELECT MaNguoiDung, COUNT(*) AS SoBN
+                 FROM LichHen
+                 WHERE TrangThai IN (0, 1)
+                   AND CAST(ThoiGianHen AS DATE) = ?
+                 GROUP BY MaNguoiDung
+             ) bn_count ON bn_count.MaNguoiDung = nd.MaNguoiDung
+             WHERE nd.MaVaiTro = 2
+               AND nd.TrangThaiTK = 1
+               AND nd.IsDeleted = 0
+               AND pc.NgayLamViec = ?
+             ORDER BY nd.HoTen, c.GioBatDau",
+            [$ngay, $ngay]
+        );
+
+        $this->success(['doctors' => $doctors, 'gioiHanBN' => 8]);
     }
 }

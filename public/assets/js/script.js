@@ -54,6 +54,155 @@ document.addEventListener("DOMContentLoaded", function () {
     const tomorrow = new Date(today);
     tomorrow.setDate(tomorrow.getDate() + 1);
     bookingDateInput.value = toISO(tomorrow);
+
+    // Load doctors when date changes
+    bookingDateInput.addEventListener("change", loadDoctorsByDate);
+    // Load on initial date
+    loadDoctorsByDate();
+  }
+
+  function loadDoctorsByDate() {
+    const ngay = bookingDateInput ? bookingDateInput.value : "";
+    const container = document.getElementById("doctorListContainer");
+    const loading = document.getElementById("doctorListLoading");
+    const empty = document.getElementById("doctorListEmpty");
+    const cards = document.getElementById("doctorCards");
+    const hiddenInput = document.getElementById("bookingDoctor");
+    const invalidMsg = document.getElementById("doctorInvalid");
+
+    if (!ngay || !container) return;
+
+    container.style.display = "";
+    loading.classList.remove("d-none");
+    empty.classList.add("d-none");
+    cards.innerHTML = "";
+    hiddenInput.value = "";
+    if (invalidMsg) invalidMsg.classList.add("d-none");
+
+    const apiBase = (window._API_BASE_PATH || "").replace(/\/$/, "");
+    fetch(apiBase + "/api/booking/doctors?ngay=" + encodeURIComponent(ngay))
+      .then(function (r) {
+        return r.json();
+      })
+      .then(function (result) {
+        loading.classList.add("d-none");
+        if (
+          !result.data ||
+          !result.data.doctors ||
+          result.data.doctors.length === 0
+        ) {
+          empty.classList.remove("d-none");
+          return;
+        }
+        var limit = result.data.gioiHanBN || 8;
+        var doctors = result.data.doctors;
+
+        // Group shifts by doctor
+        var grouped = {};
+        doctors.forEach(function (d) {
+          if (!grouped[d.MaNguoiDung]) {
+            grouped[d.MaNguoiDung] = {
+              hoTen: d.HoTen,
+              maNguoiDung: d.MaNguoiDung,
+              soBN: parseInt(d.SoBN) || 0,
+              shifts: [],
+            };
+          }
+          grouped[d.MaNguoiDung].shifts.push({
+            tenCa: d.TenCa,
+            gioBatDau: (d.GioBatDau || "").substring(0, 5),
+            gioKetThuc: (d.GioKetThuc || "").substring(0, 5),
+          });
+        });
+
+        Object.keys(grouped).forEach(function (key) {
+          var doc = grouped[key];
+          var isFull = doc.soBN >= limit;
+          var pct = Math.min(Math.round((doc.soBN / limit) * 100), 100);
+          var barColor =
+            pct >= 100 ? "bg-danger" : pct >= 75 ? "bg-warning" : "bg-success";
+
+          var shiftsHtml = doc.shifts
+            .map(function (s) {
+              return (
+                '<span class="badge bg-primary bg-opacity-75 me-1 mb-1"><i class="bi bi-clock me-1"></i>' +
+                s.tenCa +
+                " (" +
+                s.gioBatDau +
+                " - " +
+                s.gioKetThuc +
+                ")</span>"
+              );
+            })
+            .join("");
+
+          var col = document.createElement("div");
+          col.className = "col-md-6";
+          col.innerHTML =
+            '<div class="card border' +
+            (isFull
+              ? " border-danger bg-light"
+              : " border-primary border-opacity-50") +
+            " doctor-card" +
+            (isFull ? " opacity-50" : "") +
+            '" ' +
+            'data-doctor="' +
+            doc.maNguoiDung +
+            '" ' +
+            'style="cursor:' +
+            (isFull ? "not-allowed" : "pointer") +
+            '">' +
+            '<div class="card-body py-2 px-3">' +
+            '<div class="d-flex justify-content-between align-items-center mb-1">' +
+            '<span class="fw-bold"><i class="bi bi-person-circle me-1 text-primary"></i>' +
+            doc.hoTen +
+            "</span>" +
+            (isFull
+              ? '<span class="badge bg-danger">Đã đầy</span>'
+              : '<span class="badge bg-success">' +
+                doc.soBN +
+                "/" +
+                limit +
+                " BN</span>") +
+            "</div>" +
+            '<div class="mb-1">' +
+            shiftsHtml +
+            "</div>" +
+            '<div class="progress" style="height:5px;">' +
+            '<div class="progress-bar ' +
+            barColor +
+            '" style="width:' +
+            pct +
+            '%"></div>' +
+            "</div>" +
+            "</div>" +
+            "</div>";
+
+          if (!isFull) {
+            col
+              .querySelector(".doctor-card")
+              .addEventListener("click", function () {
+                // Deselect all
+                cards.querySelectorAll(".doctor-card").forEach(function (c) {
+                  c.classList.remove("border-primary", "border-3", "shadow-sm");
+                  c.classList.add("border-opacity-50");
+                });
+                // Select this
+                this.classList.add("border-primary", "border-3", "shadow-sm");
+                this.classList.remove("border-opacity-50");
+                hiddenInput.value = doc.maNguoiDung;
+                if (invalidMsg) invalidMsg.classList.add("d-none");
+              });
+          }
+
+          cards.appendChild(col);
+        });
+      })
+      .catch(function () {
+        loading.classList.add("d-none");
+        empty.classList.remove("d-none");
+        empty.textContent = "Lỗi tải danh sách bác sĩ.";
+      });
   }
 
   function showBookingFeedback(msg, type) {
@@ -104,6 +253,21 @@ document.addEventListener("DOMContentLoaded", function () {
         bookingTimeInput.classList.remove("is-invalid");
       }
 
+      // Validate doctor selection
+      var doctorInput = document.getElementById("bookingDoctor");
+      var doctorInvalid = document.getElementById("doctorInvalid");
+      var doctorContainer = document.getElementById("doctorListContainer");
+      if (
+        doctorContainer &&
+        doctorContainer.style.display !== "none" &&
+        (!doctorInput || !doctorInput.value)
+      ) {
+        if (doctorInvalid) doctorInvalid.classList.remove("d-none");
+        valid = false;
+      } else {
+        if (doctorInvalid) doctorInvalid.classList.add("d-none");
+      }
+
       if (!valid) return;
 
       // Disable button while submitting
@@ -120,6 +284,9 @@ document.addEventListener("DOMContentLoaded", function () {
           soDienThoai: phoneEl.value.replace(/\s/g, ""),
           thoiGianHen: bookingDateInput.value + " " + bookingTimeInput.value,
           ghiChu: noteEl && noteEl.value.trim() ? noteEl.value.trim() : null,
+          maNguoiDung: document.getElementById("bookingDoctor")
+            ? document.getElementById("bookingDoctor").value || null
+            : null,
         }),
       })
         .then(function (r) {
@@ -143,6 +310,8 @@ document.addEventListener("DOMContentLoaded", function () {
               nameEl.value = window._BOOKING_USER_NAME;
               phoneEl.value = window._BOOKING_USER_PHONE;
             }
+            // Reload doctor list for new date
+            loadDoctorsByDate();
             showBookingFeedback("✅ " + result.message, "success");
           } else if (result.data && result.data.requireLogin) {
             // SĐT thuộc tài khoản đã đăng ký → hiện nút đăng nhập

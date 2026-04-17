@@ -186,6 +186,10 @@ class OtpEmailController extends ApiController
     public function sendOtpLogin(): void
     {
         Auth::startSession();
+
+        // Rate limit: tối đa 5 lần gửi OTP trong 5 phút
+        $this->checkRateLimit('otp_login', 5, 300);
+
         $data = $this->getJSON();
 
         $errors = $this->validate($data, [
@@ -434,41 +438,58 @@ class OtpEmailController extends ApiController
         }
         
         try {
-            // Kiểm tra số điện thoại/email đãm tồn tại
-            if (User::findByPhone($data['sodienthoai'])) {
-                $this->error('Số điện thoại đã được sử dụng', null, 409);
-                return;
-            }
-            
-            if (User::findByEmail($data['email'])) {
-                $this->error('Email đã được sử dụng', null, 409);
-                return;
-            }
-            
-            // Lấy MaVaiTro cho Bệnh Nhân (tạo nếu chưa có)
-            $maVaiTro = $this->getOrCreateBenhNhanRole();
-            if (!$maVaiTro) {
-                $this->error('Không thể xác định vai trò người dùng', null, 500);
-                return;
-            }
-            
-            // Tạo username từ số điện thoại
-            $username = 'user_' . substr($data['sodienthoai'], -6);
-            
-            // Gọi SP_TaoTaiKhoanNguoiDung
-            $userId = User::createUser([
-                'HoTen'       => $data['hoTen'],
-                'SoDienThoai' => $data['sodienthoai'],
-                'Email'       => $data['email'],
-                'TenDangNhap' => $username,
-                'MatKhau'     => password_hash($data['matkhau'], PASSWORD_BCRYPT),
-                'MaVaiTro'    => $maVaiTro,
-                'TrangThaiTK' => 1,   // Kích hoạt luôn (không cần verify email)
-            ]);
-            
-            if (!$userId) {
-                $this->error('Không thể tạo tài khoản', null, 500);
-                return;
+            // Kiểm tra số điện thoại đã tồn tại (bao gồm cả soft-deleted)
+            $existingByPhone = User::findByPhoneAll($data['sodienthoai']);
+            if ($existingByPhone) {
+                // Nếu tài khoản active → từ chối
+                if (!(int)($existingByPhone['IsDeleted'] ?? 0)) {
+                    $this->error('Số điện thoại đã được sử dụng', null, 409);
+                    return;
+                }
+                // Nếu soft-deleted → kích hoạt lại tài khoản
+                $maVaiTro = $this->getOrCreateBenhNhanRole();
+                User::updateInfo((int)$existingByPhone['MaNguoiDung'], [
+                    'HoTen'       => $data['hoTen'],
+                    'Email'       => $data['email'],
+                    'MatKhau'     => password_hash($data['matkhau'], PASSWORD_DEFAULT),
+                    'MaVaiTro'    => $maVaiTro ?: 4,
+                    'TrangThaiTK' => 1,
+                    'IsDeleted'   => 0,
+                    'DoiMatKhau'  => 1,
+                ]);
+                $userId = (int)$existingByPhone['MaNguoiDung'];
+            } else {
+                // Kiểm tra email (bao gồm cả soft-deleted)
+                $existingByEmail = User::findByEmailAll($data['email']);
+                if ($existingByEmail && !(int)($existingByEmail['IsDeleted'] ?? 0)) {
+                    $this->error('Email đã được sử dụng', null, 409);
+                    return;
+                }
+
+                // Lấy MaVaiTro cho Bệnh Nhân
+                $maVaiTro = $this->getOrCreateBenhNhanRole();
+                if (!$maVaiTro) {
+                    $this->error('Không thể xác định vai trò người dùng', null, 500);
+                    return;
+                }
+
+                // Tạo username từ số điện thoại
+                $username = 'user_' . substr($data['sodienthoai'], -6);
+
+                $userId = User::createUser([
+                    'HoTen'       => $data['hoTen'],
+                    'SoDienThoai' => $data['sodienthoai'],
+                    'Email'       => $data['email'],
+                    'TenDangNhap' => $username,
+                    'MatKhau'     => $data['matkhau'],
+                    'MaVaiTro'    => $maVaiTro,
+                    'TrangThaiTK' => 1,
+                ]);
+
+                if (!$userId) {
+                    $this->error('Không thể tạo tài khoản', null, 500);
+                    return;
+                }
             }
             
             // Tạo email verification token
@@ -837,6 +858,10 @@ class OtpEmailController extends ApiController
     public function sendOtpPhoneReset(): void
     {
         Auth::startSession();
+
+        // Rate limit: tối đa 5 lần gửi OTP trong 5 phút
+        $this->checkRateLimit('otp_phone_reset', 5, 300);
+
         $data = $this->getJSON();
 
         $errors = $this->validate($data, ['email' => 'required|email']);

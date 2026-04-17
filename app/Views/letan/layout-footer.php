@@ -25,14 +25,13 @@
     }
 })();
 
-// ═══ Admin API Helper ═══
-var ADMIN_API = '<?= $baseUrl ?>index.php?route=api/admin/';
+// ═══ LeTan API Helper ═══
+var LETAN_API = '<?= $baseUrl ?>index.php?route=api/letan/';
 
-function adminFetch(endpoint, options) {
+function letanFetch(endpoint, options) {
     options = options || {};
-    // Tách endpoint và query params để nối đúng cách
     var parts = endpoint.split('?');
-    var url = ADMIN_API + parts[0];
+    var url = LETAN_API + parts[0];
     if (parts[1]) url += '&' + parts[1];
     var config = {
         method: options.method || 'GET',
@@ -44,7 +43,7 @@ function adminFetch(endpoint, options) {
     return fetch(url, config).then(function(r) { return r.json(); });
 }
 
-function adminToast(message, type) {
+function letanToast(message, type) {
     type = type || 'success';
     var container = document.getElementById('toastContainer');
     if (!container) return;
@@ -68,13 +67,5 @@ function formatNumber(num) {
 
 function formatCurrency(num) {
     return new Intl.NumberFormat('vi-VN', { style: 'currency', currency: 'VND' }).format(num);
-}
-
-function renderStars(score) {
-    var html = '';
-    for (var i = 1; i <= 5; i++) {
-        html += '<i class="bi ' + (i <= score ? 'bi-star-fill' : 'bi-star') + '"></i>';
-    }
-    return html;
 }
 </script>

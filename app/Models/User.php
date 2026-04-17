@@ -22,11 +22,20 @@ class User extends Model
     }
 
     /**
-     * Tìm người dùng theo số điện thoại
+     * Tìm người dùng theo số điện thoại (chỉ active)
      */
     public static function findByPhone(string $phone): array|false
     {
-        $sql = "SELECT * FROM NguoiDung WHERE SoDienThoai = ? AND TrangThaiTK = 1";
+        $sql = "SELECT * FROM NguoiDung WHERE SoDienThoai = ? AND IsDeleted = 0";
+        return self::queryOne($sql, [$phone]);
+    }
+
+    /**
+     * Tìm người dùng theo SĐT bao gồm cả soft-deleted (dùng cho uniqueness check)
+     */
+    public static function findByPhoneAll(string $phone): array|false
+    {
+        $sql = "SELECT * FROM NguoiDung WHERE SoDienThoai = ?";
         return self::queryOne($sql, [$phone]);
     }
 
@@ -154,7 +163,16 @@ class User extends Model
      */
     public static function findByEmail(string $email): array|false
     {
-        $sql = "SELECT * FROM NguoiDung WHERE Email = ? AND TrangThaiTK = 1";
+        $sql = "SELECT * FROM NguoiDung WHERE Email = ? AND IsDeleted = 0";
+        return self::queryOne($sql, [$email]);
+    }
+
+    /**
+     * Tìm người dùng theo email bao gồm cả soft-deleted (dùng cho uniqueness check)
+     */
+    public static function findByEmailAll(string $email): array|false
+    {
+        $sql = "SELECT * FROM NguoiDung WHERE Email = ?";
         return self::queryOne($sql, [$email]);
     }
 

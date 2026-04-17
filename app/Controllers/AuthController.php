@@ -14,6 +14,23 @@ class AuthController extends Controller
 
     public function login(): void
     {
+        // Nếu đã đăng nhập → chuyển hướng theo vai trò
+        \App\Core\Auth::startSession();
+        if (\App\Core\Auth::isAuthenticated()) {
+            if (\App\Core\Auth::hasRole(1)) {
+                header('Location: index.php?route=admin/dashboard');
+                exit;
+            } elseif (\App\Core\Auth::hasRole(2)) {
+                header('Location: index.php?route=bacsi/dashboard');
+                exit;
+            } elseif (\App\Core\Auth::hasRole(3)) {
+                header('Location: index.php?route=letan/dashboard');
+                exit;
+            } else {
+                header('Location: index.php?route=profile');
+                exit;
+            }
+        }
         $this->render('login', ['phongKham' => $this->getPhongKhamData()]);
     }
 

@@ -3,13 +3,13 @@ declare(strict_types=1);
 
 namespace App\Models;
 
+use App\Core\Database;
+
 class DanhGia
 {
-    private $db;
-
     public function __construct()
     {
-        $this->db = new Database();
+        // Sử dụng Database static methods từ App\Core\Database
     }
 
     /**
@@ -26,7 +26,7 @@ class DanhGia
                   VALUES (:MaPhieuKham, :MaBenhNhan, :DiemDanh, :NhanXet, GETDATE())";
 
         try {
-            $this->db->query($query, [
+            Database::query($query, [
                 ':MaPhieuKham' => $maPhieuKham,
                 ':MaBenhNhan' => $maBenhNhan,
                 ':DiemDanh' => $diemDanh,
@@ -34,12 +34,20 @@ class DanhGia
             ]);
 
             // Cập nhật tỷ lệ hài lòng trong ThanhVienInfo
-            $thanhVienModel = new ThanhVienInfo();
-            $avgScore = $thanhVienModel->calculateAverageSatisfaction($maBenhNhan);
-            $thanhVienModel->updateSatisfactionRate($maBenhNhan, $avgScore);
+            $avg = Database::fetchOne(
+                "SELECT AVG(CAST(DiemDanh AS FLOAT)) AS AvgScore FROM DanhGia WHERE MaBenhNhan = ?",
+                [$maBenhNhan]
+            );
+            if ($avg && $avg['AvgScore'] !== null) {
+                $tyLe = round((float)$avg['AvgScore'] / 5 * 100, 1);
+                Database::query(
+                    "UPDATE ThanhVienInfo SET TyLeHaiLong = ? WHERE MaBenhNhan = ?",
+                    [$tyLe, $maBenhNhan]
+                );
+            }
 
             return true;
-        } catch (Exception $e) {
+        } catch (\Exception $e) {
             error_log("Error creating rating: " . $e->getMessage());
             return false;
         }
@@ -56,7 +64,7 @@ class DanhGia
                   WHERE dg.MaPhieuKham = :MaPhieuKham
                   ORDER BY dg.NgayDanhGia DESC";
 
-        $result = $this->db->query($query, [':MaPhieuKham' => $maPhieuKham])->fetch();
+        $result = Database::fetchOne($query, [':MaPhieuKham' => $maPhieuKham]);
         return $result ?: null;
     }
 
@@ -75,11 +83,11 @@ class DanhGia
                   ORDER BY dg.NgayDanhGia DESC
                   OFFSET :Offset ROWS FETCH NEXT :Limit ROWS ONLY";
 
-        return $this->db->query($query, [
+        return Database::fetchAll($query, [
             ':MaBenhNhan' => $maBenhNhan,
             ':Offset' => $offset,
             ':Limit' => $limit
-        ])->fetchAll();
+        ]);
     }
 
     /**
@@ -94,7 +102,7 @@ class DanhGia
                   LEFT JOIN NhanVien nv ON pk.MaBacSi = nv.MaNhanVien
                   WHERE dg.MaDanhGia = :MaDanhGia";
 
-        $result = $this->db->query($query, [':MaDanhGia' => $maDanhGia])->fetch();
+        $result = Database::fetchOne($query, [':MaDanhGia' => $maDanhGia]);
         return $result ?: null;
     }
 
@@ -126,9 +134,9 @@ class DanhGia
         $query = "UPDATE DanhGia SET " . implode(", ", $updates) . " WHERE MaDanhGia = :MaDanhGia";
 
         try {
-            $this->db->query($query, $params);
+            Database::query($query, $params);
             return true;
-        } catch (Exception $e) {
+        } catch (\Exception $e) {
             error_log("Error updating rating: " . $e->getMessage());
             return false;
         }
@@ -141,9 +149,9 @@ class DanhGia
     {
         try {
             $query = "DELETE FROM DanhGia WHERE MaDanhGia = :MaDanhGia";
-            $this->db->query($query, [':MaDanhGia' => $maDanhGia]);
+            Database::query($query, [':MaDanhGia' => $maDanhGia]);
             return true;
-        } catch (Exception $e) {
+        } catch (\Exception $e) {
             error_log("Error deleting rating: " . $e->getMessage());
             return false;
         }
@@ -159,7 +167,7 @@ class DanhGia
                   JOIN PhieuKham pk ON dg.MaPhieuKham = pk.MaPhieuKham
                   WHERE pk.MaBacSi = :MaBacSi";
 
-        $result = $this->db->query($query, [':MaBacSi' => $maBacSi])->fetch();
+        $result = Database::fetchOne($query, [':MaBacSi' => $maBacSi]);
         return $result ? (float)$result['AvgScore'] : 0.0;
     }
 
@@ -178,11 +186,11 @@ class DanhGia
                   ORDER BY dg.NgayDanhGia DESC
                   OFFSET :Offset ROWS FETCH NEXT :Limit ROWS ONLY";
 
-        return $this->db->query($query, [
+        return Database::fetchAll($query, [
             ':MaBacSi' => $maBacSi,
             ':Offset' => $offset,
             ':Limit' => $limit
-        ])->fetchAll();
+        ]);
     }
 
     /**
@@ -194,10 +202,10 @@ class DanhGia
                   WHERE MaPhieuKham = :MaPhieuKham 
                   AND MaBenhNhan = :MaBenhNhan";
 
-        $result = $this->db->query($query, [
+        $result = Database::fetchOne($query, [
             ':MaPhieuKham' => $maPhieuKham,
             ':MaBenhNhan' => $maBenhNhan
-        ])->fetch();
+        ]);
 
         return ((int)($result['Count'] ?? 0)) > 0;
     }
@@ -217,10 +225,10 @@ class DanhGia
                   ORDER BY dg.NgayDanhGia DESC
                   OFFSET :Offset ROWS FETCH NEXT :Limit ROWS ONLY";
 
-        return $this->db->query($query, [
+        return Database::fetchAll($query, [
             ':Offset' => $offset,
             ':Limit' => $limit
-        ])->fetchAll();
+        ]);
     }
 
     /**
@@ -238,7 +246,7 @@ class DanhGia
                     SUM(CASE WHEN DiemDanh = 1 THEN 1 ELSE 0 END) as OneStar
                   FROM DanhGia";
 
-        return $this->db->query($query)->fetch() ?: [];
+        return Database::fetchOne($query) ?: [];
     }
 
     /**
@@ -253,6 +261,6 @@ class DanhGia
                   LEFT JOIN NhanVien nv ON pk.MaBacSi = nv.MaNhanVien
                   ORDER BY dg.NgayDanhGia DESC";
 
-        return $this->db->query($query, [':Limit' => $limit])->fetchAll();
+        return Database::fetchAll($query, [':Limit' => $limit]);
     }
 }

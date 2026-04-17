@@ -1,11 +1,10 @@
 <?php
 /**
- * Admin Layout Template
- * Được include bởi tất cả các trang admin
+ * BacSi Layout Header
  * Biến cần truyền: $currentUser, $pageTitle, $activePage
  */
 $baseUrl = defined('BASE_URL') ? BASE_URL : '/';
-$userName = htmlspecialchars($currentUser['HoTen'] ?? 'Admin', ENT_QUOTES, 'UTF-8');
+$userName = htmlspecialchars($currentUser['HoTen'] ?? 'Bác Sĩ', ENT_QUOTES, 'UTF-8');
 $userInitial = function_exists('mb_substr') ? mb_substr($userName, 0, 1, 'UTF-8') : substr($userName, 0, 1);
 ?>
 <!DOCTYPE html>
@@ -14,7 +13,7 @@ $userInitial = function_exists('mb_substr') ? mb_substr($userName, 0, 1, 'UTF-8'
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <meta name="csrf-token" content="<?= htmlspecialchars(\App\Controllers\ApiController::generateCsrfToken()) ?>">
-    <title><?= htmlspecialchars($pageTitle ?? 'Quản trị', ENT_QUOTES, 'UTF-8') ?> | DarmaSoft Admin</title>
+    <title><?= htmlspecialchars($pageTitle ?? 'Bác Sĩ', ENT_QUOTES, 'UTF-8') ?> | DarmaSoft</title>
 
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
@@ -35,13 +34,13 @@ $userInitial = function_exists('mb_substr') ? mb_substr($userName, 0, 1, 'UTF-8'
     <aside class="admin-sidebar" id="adminSidebar">
         <div class="admin-sidebar-brand">
             <img src="<?= $baseUrl ?>public/assets/images/logo.png" alt="DarmaSoft">
-            <span>DarmaSoft</span>
+            <span>DermaSoft</span>
         </div>
 
         <nav class="admin-sidebar-nav">
             <div class="admin-nav-section">
                 <div class="admin-nav-section-title">Tổng quan</div>
-                <a href="<?= $baseUrl ?>index.php?route=admin/dashboard"
+                <a href="<?= $baseUrl ?>index.php?route=bacsi/dashboard"
                    class="admin-nav-item <?= ($activePage ?? '') === 'dashboard' ? 'active' : '' ?>">
                     <i class="bi bi-grid-1x2"></i>
                     <span>Dashboard</span>
@@ -49,26 +48,25 @@ $userInitial = function_exists('mb_substr') ? mb_substr($userName, 0, 1, 'UTF-8'
             </div>
 
             <div class="admin-nav-section">
-                <div class="admin-nav-section-title">Quản lý</div>
-                <a href="<?= $baseUrl ?>index.php?route=admin/benh-nhan"
+                <div class="admin-nav-section-title">Công việc</div>
+                <a href="<?= $baseUrl ?>index.php?route=bacsi/lich-lam-viec"
+                   class="admin-nav-item <?= ($activePage ?? '') === 'lich-lam-viec' ? 'active' : '' ?>">
+                    <i class="bi bi-calendar3"></i>
+                    <span>Lịch làm việc</span>
+                </a>
+                <a href="<?= $baseUrl ?>index.php?route=bacsi/benh-nhan"
                    class="admin-nav-item <?= ($activePage ?? '') === 'benh-nhan' ? 'active' : '' ?>">
                     <i class="bi bi-people"></i>
-                    <span>Bệnh nhân</span>
+                    <span>Bệnh nhân của tôi</span>
                 </a>
-                <a href="<?= $baseUrl ?>index.php?route=admin/thanh-vien"
-                   class="admin-nav-item <?= ($activePage ?? '') === 'thanh-vien' ? 'active' : '' ?>">
-                    <i class="bi bi-person-badge"></i>
-                    <span>Thành viên</span>
-                </a>
-                <a href="<?= $baseUrl ?>index.php?route=admin/hang-thanh-vien"
-                   class="admin-nav-item <?= ($activePage ?? '') === 'hang-thanh-vien' ? 'active' : '' ?>">
-                    <i class="bi bi-gem"></i>
-                    <span>Hạng thành viên</span>
-                </a>
-                <a href="<?= $baseUrl ?>index.php?route=admin/danh-gia"
-                   class="admin-nav-item <?= ($activePage ?? '') === 'danh-gia' ? 'active' : '' ?>">
-                    <i class="bi bi-star"></i>
-                    <span>Đánh giá</span>
+            </div>
+
+            <div class="admin-nav-section">
+                <div class="admin-nav-section-title">Tài chính</div>
+                <a href="<?= $baseUrl ?>index.php?route=bacsi/luong"
+                   class="admin-nav-item <?= ($activePage ?? '') === 'luong' ? 'active' : '' ?>">
+                    <i class="bi bi-wallet2"></i>
+                    <span>Bảng lương</span>
                 </a>
             </div>
         </nav>
@@ -78,7 +76,7 @@ $userInitial = function_exists('mb_substr') ? mb_substr($userName, 0, 1, 'UTF-8'
                 <div class="admin-user-avatar"><?= $userInitial ?></div>
                 <div class="admin-user-info">
                     <div class="admin-user-name"><?= $userName ?></div>
-                    <div class="admin-user-role">Quản trị viên</div>
+                    <div class="admin-user-role">Bác Sĩ</div>
                 </div>
             </div>
         </div>
@@ -94,11 +92,11 @@ $userInitial = function_exists('mb_substr') ? mb_substr($userName, 0, 1, 'UTF-8'
                 <h1 class="admin-header-title"><?= htmlspecialchars($pageTitle ?? '', ENT_QUOTES, 'UTF-8') ?></h1>
             </div>
             <div class="admin-header-right">
-                <a href="<?= $baseUrl ?>index.php?route=home" class="btn btn-outline-secondary btn-sm rounded-pill px-3" target="_blank">
-                    <i class="bi bi-box-arrow-up-right me-1"></i>Xem Website
+                <a href="<?= $baseUrl ?>index.php?route=profile" class="btn btn-outline-secondary btn-sm rounded-pill px-3">
+                    <i class="bi bi-person me-1"></i>Hồ sơ
                 </a>
                 <a href="<?= $baseUrl ?>index.php?route=logout" class="btn btn-outline-danger btn-sm rounded-pill px-3">
-                    <i class="bi bi-box-arrow-left me-1"></i>Đăng xuất
+                    <i class="bi bi-box-arrow-right me-1"></i>Đăng xuất
                 </a>
             </div>
         </header>

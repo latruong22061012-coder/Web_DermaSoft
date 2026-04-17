@@ -25,14 +25,13 @@
     }
 })();
 
-// ═══ Admin API Helper ═══
-var ADMIN_API = '<?= $baseUrl ?>index.php?route=api/admin/';
+// ═══ BacSi API Helper ═══
+var BACSI_API = '<?= $baseUrl ?>index.php?route=api/bacsi/';
 
-function adminFetch(endpoint, options) {
+function bacsiFetch(endpoint, options) {
     options = options || {};
-    // Tách endpoint và query params để nối đúng cách
     var parts = endpoint.split('?');
-    var url = ADMIN_API + parts[0];
+    var url = BACSI_API + parts[0];
     if (parts[1]) url += '&' + parts[1];
     var config = {
         method: options.method || 'GET',
@@ -44,7 +43,7 @@ function adminFetch(endpoint, options) {
     return fetch(url, config).then(function(r) { return r.json(); });
 }
 
-function adminToast(message, type) {
+function bacsiToast(message, type) {
     type = type || 'success';
     var container = document.getElementById('toastContainer');
     if (!container) return;

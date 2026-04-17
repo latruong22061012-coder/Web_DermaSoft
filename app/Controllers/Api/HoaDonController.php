@@ -218,6 +218,12 @@ class HoaDonController extends ApiController
         }
 
         $invoice = HoaDon::getById((int)$id);
+
+        // Kiểm tra hóa đơn đã thanh toán chưa (chống cộng điểm trùng)
+        if ((int)$invoice['TrangThai'] === 1) {
+            $this->error('Hóa đơn này đã được thanh toán.', null, 400);
+            return;
+        }
         
         // Kiểm tra số tiền thanh toán
         $paidAmount = (float)$data['sotienphat'];
@@ -236,9 +242,12 @@ class HoaDonController extends ApiController
             'SoTienTra' => $paidAmount,
             'TienThua' => max(0, $change),
             'PhuongThuc' => $data['phuongthuc'] ?? 'Tiền mặt',
-            'NgayThanhToan' => date('Y-m-d H:i:s'),
-            'GhiChu' => $data['ghichu'] ?? ''
+            'NgayThanhToan' => date('Y-m-d H:i:s')
         ]);
+
+        // Trigger TRG_HoaDon_CapPhatDiem tự động cộng điểm tích lũy,
+        // cập nhật SoLanKham, MaHang, và tạo ThanhVienInfo mới nếu cần
+        // khi TrangThai chuyển từ 0→1
 
         $this->logAccess("Update invoice payment - ID: $id, Amount: $paidAmount");
 

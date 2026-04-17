@@ -89,12 +89,34 @@
         var startIdx = (pag.page - 1) * pag.limit;
         var html = '';
         list.forEach(function(bn, i) {
-            var status = parseInt(bn.TrangThaiTK) === 1;
+            var hasAccount = !!bn.MaNguoiDung;
+            var status = hasAccount && parseInt(bn.TrangThaiTK) === 1;
             var ngay = bn.NgayTao ? new Date(bn.NgayTao).toLocaleDateString('vi-VN') : '—';
             var hangHtml = bn.TenHang
                 ? '<span class="admin-badge" style="background:' + bn.MauHangHex + '15;color:' + bn.MauHangHex + '">' +
                   '<span class="admin-color-dot" style="background:' + bn.MauHangHex + '"></span>' + bn.TenHang + '</span>'
                 : '<span class="text-muted small">—</span>';
+
+            var statusHtml = '';
+            if (hasAccount) {
+                statusHtml = '<span class="admin-badge ' + (status ? 'admin-badge-active' : 'admin-badge-locked') + '">' +
+                    '<i class="bi bi-circle-fill" style="font-size:.45rem"></i>' +
+                    (status ? 'Hoạt động' : 'Bị khóa') + '</span>';
+            } else {
+                statusHtml = '<span class="admin-badge" style="background:#f0f0f0;color:#999"><i class="bi bi-circle-fill" style="font-size:.45rem"></i>Chưa có TK</span>';
+            }
+
+            var actionHtml = '';
+            if (hasAccount) {
+                actionHtml = '<div class="d-flex gap-1">' +
+                    '<button class="btn btn-sm btn-outline-primary rounded-pill px-2" title="Chi tiết" onclick="viewDetail(' + bn.MaNguoiDung + ')">' +
+                        '<i class="bi bi-eye"></i></button>' +
+                    '<button class="btn btn-sm ' + (status ? 'btn-outline-warning' : 'btn-outline-success') + ' rounded-pill px-2" title="' + (status ? 'Khóa' : 'Mở khóa') + '" onclick="toggleStatus(' + bn.MaNguoiDung + ',' + (status ? 0 : 1) + ')">' +
+                        '<i class="bi bi-' + (status ? 'lock' : 'unlock') + '"></i></button>' +
+                    '</div>';
+            } else {
+                actionHtml = '<span class="text-muted small">—</span>';
+            }
 
             html += '<tr>' +
                 '<td class="text-muted">' + (startIdx + i + 1) + '</td>' +
@@ -102,23 +124,9 @@
                 '<td>' + (bn.SoDienThoai || '—') + '</td>' +
                 '<td class="small">' + (bn.Email || '—') + '</td>' +
                 '<td>' + hangHtml + '</td>' +
-                '<td>' +
-                    '<span class="admin-badge ' + (status ? 'admin-badge-active' : 'admin-badge-locked') + '">' +
-                        '<i class="bi bi-circle-fill" style="font-size:.45rem"></i>' +
-                        (status ? 'Hoạt động' : 'Bị khóa') +
-                    '</span>' +
-                '</td>' +
+                '<td>' + statusHtml + '</td>' +
                 '<td class="text-muted small">' + ngay + '</td>' +
-                '<td>' +
-                    '<div class="d-flex gap-1">' +
-                        '<button class="btn btn-sm btn-outline-primary rounded-pill px-2" title="Chi tiết" onclick="viewDetail(' + bn.MaNguoiDung + ')">' +
-                            '<i class="bi bi-eye"></i>' +
-                        '</button>' +
-                        '<button class="btn btn-sm ' + (status ? 'btn-outline-warning' : 'btn-outline-success') + ' rounded-pill px-2" title="' + (status ? 'Khóa' : 'Mở khóa') + '" onclick="toggleStatus(' + bn.MaNguoiDung + ',' + (status ? 0 : 1) + ')">' +
-                            '<i class="bi bi-' + (status ? 'lock' : 'unlock') + '"></i>' +
-                        '</button>' +
-                    '</div>' +
-                '</td>' +
+                '<td>' + actionHtml + '</td>' +
             '</tr>';
         });
         tbody.innerHTML = html;

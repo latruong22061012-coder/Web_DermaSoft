@@ -23,6 +23,9 @@ class Auth
             return false;
         }
 
+        // Chống session fixation: tạo session ID mới sau khi login
+        session_regenerate_id(true);
+
         // Lưu vào session
         $_SESSION[self::SESSION_KEY] = $user;
         $_SESSION['login_time'] = time();

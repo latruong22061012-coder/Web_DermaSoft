@@ -369,8 +369,9 @@ function viewPhieuKham(maPhieuKham) {
       renderPhieuKhamDetail(result.data);
       footer.style.display = "flex";
 
-      // Kiểm tra đã đánh giá chưa
-      if (parseInt(result.data.TrangThai) === 1) {
+      // Kiểm tra đã đánh giá chưa (TrangThai: 1=Đã hoàn thành, 3=Đã khám từ WinApp)
+      var pkTT = parseInt(result.data.TrangThai);
+      if (pkTT === 1 || pkTT === 3) {
         fetch(apiBase + "/api/danhgia/check/" + maPhieuKham)
           .then(function (r2) {
             return r2.json();
@@ -398,9 +399,10 @@ function viewPhieuKham(maPhieuKham) {
 function renderPhieuKhamDetail(pk) {
   var body = document.getElementById("pkModalBody");
   var statusMap = {
-    0: { label: "Chờ xử lý", cls: "status-pending" },
-    1: { label: "Đã hoàn thành", cls: "status-completed" },
-    2: { label: "Đã hủy", cls: "status-cancelled" },
+    0: { label: "Chờ khám", cls: "status-pending" },
+    1: { label: "Đang khám", cls: "status-confirmed" },
+    2: { label: "Hoàn thành", cls: "status-completed" },
+    3: { label: "Đã khám", cls: "status-completed" },
   };
   var st = statusMap[parseInt(pk.TrangThai)] || statusMap[0];
   var ngay = pk.NgayKham
