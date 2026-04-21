@@ -71,7 +71,7 @@ class ThanhVienInfo extends Model
      */
     public static function getTopPoints($limit = 10): array
     {
-        $sql = "SELECT * FROM ThanhVienInfo ORDER BY DiemThuong DESC LIMIT ?";
+        $sql = "SELECT TOP (?) * FROM ThanhVienInfo ORDER BY DiemTichLuy DESC";
         return parent::query($sql, [$limit]);
     }
 }

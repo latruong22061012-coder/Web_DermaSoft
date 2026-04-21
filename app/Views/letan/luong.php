@@ -13,8 +13,8 @@
     <div class="admin-card-head">
         <h2 class="admin-card-title"><i class="bi bi-wallet2"></i>Bảng lương</h2>
     </div>
-    <div class="admin-card-body-flush" style="overflow-x:auto">
-        <table class="admin-table">
+    <div class="admin-card-body-flush">
+        <table class="admin-table" style="min-width:900px">
             <thead>
                 <tr>
                     <th>Tháng</th>

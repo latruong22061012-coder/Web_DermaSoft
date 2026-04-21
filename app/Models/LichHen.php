@@ -46,7 +46,7 @@ class LichHen extends Model
      */
     public static function getByDoctorId(int $doctorId): array
     {
-        return self::findAllBy('MaBacSi', $doctorId);
+        return self::findAllBy('MaNguoiDung', $doctorId);
     }
 
     /**
@@ -74,7 +74,7 @@ class LichHen extends Model
     {
         return self::create([
             'MaBenhNhan' => $data['MaBenhNhan'] ?? 0,
-            'MaBacSi' => $data['MaBacSi'] ?? 0,
+            'MaNguoiDung' => $data['MaNguoiDung'] ?? null,
             'ThoiGianHen' => $data['ThoiGianHen'] ?? null,
             'TrangThai' => 0,  // Mặc định là pending (Chờ xác nhận)
             'GhiChu' => $data['GhiChu'] ?? ''

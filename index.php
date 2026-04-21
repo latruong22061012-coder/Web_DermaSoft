@@ -121,6 +121,7 @@ if (strpos($route, 'api/') === 0) {
     exit;
 }
 
+
 switch ($route) {
     case 'home':
         (new HomeController())->index();

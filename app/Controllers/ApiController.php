@@ -311,7 +311,7 @@ abstract class ApiController
     protected function logAccess(string $action): void
     {
         $user = Auth::getCurrentUser();
-        $userId = $user['MaNhanVien'] ?? 'unknown';
+        $userId = $user['MaNguoiDung'] ?? 'unknown';
         $timestamp = date('Y-m-d H:i:s');
         
         error_log("[$timestamp] User $userId: $action");

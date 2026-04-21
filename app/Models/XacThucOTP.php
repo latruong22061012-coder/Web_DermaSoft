@@ -52,12 +52,11 @@ class XacThucOTP
      */
     public function verifyOTP($soDienThoai, $otp): array
     {
-        $query = "SELECT * FROM XacThucOTP 
+        $query = "SELECT TOP 1 * FROM XacThucOTP 
                   WHERE SoDienThoai = :SoDienThoai 
                   AND MaOTP = :MaOTP
                   AND TrangThai IN (0, 1)
-                  ORDER BY NgayTao DESC
-                  LIMIT 1";
+                  ORDER BY NgayTao DESC";
 
         $result = $this->db->query($query, [
             ':SoDienThoai' => $soDienThoai,
@@ -95,8 +94,7 @@ class XacThucOTP
             return [
                 'success' => true,
                 'message' => 'Xác thực OTP thành công',
-                'code' => 'OTP_VERIFIED',
-                'maBenhNhan' => $result['MaBenhNhan']
+                'code' => 'OTP_VERIFIED'
             ];
         } catch (Exception $e) {
             error_log("Error verifying OTP: " . $e->getMessage());
@@ -113,12 +111,11 @@ class XacThucOTP
      */
     public function isOTPValid($soDienThoai, $otp): bool
     {
-        $query = "SELECT * FROM XacThucOTP 
+        $query = "SELECT TOP 1 * FROM XacThucOTP 
                   WHERE SoDienThoai = :SoDienThoai 
                   AND MaOTP = :MaOTP
                   AND TrangThai != 2
-                  ORDER BY NgayTao DESC
-                  LIMIT 1";
+                  ORDER BY NgayTao DESC";
 
         $result = $this->db->query($query, [
             ':SoDienThoai' => $soDienThoai,
@@ -171,31 +168,28 @@ class XacThucOTP
      */
     public function isPhoneNumberVerified($soDienThoai): bool
     {
-        $query = "SELECT MaBenhNhan FROM XacThucOTP 
+        $query = "SELECT TOP 1 MaXacThuc FROM XacThucOTP 
                   WHERE SoDienThoai = :SoDienThoai 
-                  AND TrangThai = 1 
-                  AND MaBenhNhan IS NOT NULL
-                  LIMIT 1";
+                  AND TrangThai = 1";
 
         $result = $this->db->query($query, [':SoDienThoai' => $soDienThoai])->fetch();
-        return $result !== null && $result['MaBenhNhan'] !== null;
+        return $result !== null && $result !== false;
     }
 
     /**
      * Liên kết OTP đã xác thực với tài khoản khách hàng
+     * Đánh dấu trạng thái đã xác thực cho số điện thoại
      */
-    public function linkToCustomer($soDienThoai, $maBenhNhan): bool
+    public function linkToCustomer($soDienThoai): bool
     {
         $query = "UPDATE XacThucOTP 
-                  SET MaBenhNhan = :MaBenhNhan 
+                  SET TrangThai = 1 
                   WHERE SoDienThoai = :SoDienThoai 
-                  AND TrangThai = 1 
-                  AND MaBenhNhan IS NULL";
+                  AND TrangThai = 0";
 
         try {
             $this->db->query($query, [
-                ':SoDienThoai' => $soDienThoai,
-                ':MaBenhNhan' => $maBenhNhan
+                ':SoDienThoai' => $soDienThoai
             ]);
             return true;
         } catch (Exception $e) {

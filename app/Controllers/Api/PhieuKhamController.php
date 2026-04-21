@@ -207,7 +207,7 @@ class PhieuKhamController extends ApiController
         $recordId = PhieuKham::create([
             'MaBenhNhan' => (int)$data['ma_benhnhan'],
             'MaLichHen' => (int)$data['ma_lichhhen'],
-            'MaBacSi' => (int)$data['ma_bacsi'],
+            'MaNguoiDung' => (int)$data['ma_bacsi'],
             'NgayKham' => date('Y-m-d H:i:s')
         ]);
 
@@ -225,7 +225,7 @@ class PhieuKhamController extends ApiController
     /**
      * PUT /api/phieukham/{id}
      * Cập nhật phiếu khám (Windows App ghi kết quả khám)
-     * Yêu cầu: {trieuchung?, chandoan?, huongdieutri?, ngayhen_taikham?}
+     * Yêu cầu: {trieuchung?, chandoan?, ngayhen_taikham?}
      */
     public function update(): void
     {
@@ -251,7 +251,6 @@ class PhieuKhamController extends ApiController
         PhieuKham::updateResults((int)$id, [
             'TrieuChung' => $data['trieuchung'] ?? null,
             'ChanDoan' => $data['chandoan'] ?? null,
-            'HuongDieuTri' => $data['huongdieutri'] ?? null,
             'NgayHen_TaiKham' => $data['ngayhen_taikham'] ?? null
         ]);
 

@@ -43,9 +43,11 @@ class AdminApiController extends ApiController
             "SELECT COUNT(*) as total FROM BenhNhan WHERE IsDeleted = 0", []
         );
 
-        // Tổng thành viên
+        // Tổng thành viên (chỉ đếm thành viên có BenhNhan chưa bị xóa)
         $totalTV = Database::fetchOne(
-            "SELECT COUNT(*) as total FROM ThanhVienInfo", []
+            "SELECT COUNT(*) as total FROM ThanhVienInfo tv
+             INNER JOIN BenhNhan bn ON tv.MaBenhNhan = bn.MaBenhNhan
+             WHERE bn.IsDeleted = 0", []
         );
 
         // Lịch hẹn chờ xác nhận hôm nay
@@ -60,11 +62,12 @@ class AdminApiController extends ApiController
             "SELECT AVG(CAST(DiemDanh AS FLOAT)) as avg_score FROM DanhGia", []
         );
 
-        // Phân bố hạng thành viên
+        // Phân bố hạng thành viên (chỉ tính thành viên active)
         $hangPhanBo = Database::fetchAll(
             "SELECT h.TenHang, h.MauHangHex, COUNT(tv.MaThanhVien) as soLuong
              FROM HangThanhVien h
              LEFT JOIN ThanhVienInfo tv ON h.MaHang = tv.MaHang
+             LEFT JOIN BenhNhan bn ON tv.MaBenhNhan = bn.MaBenhNhan AND bn.IsDeleted = 0
              GROUP BY h.MaHang, h.TenHang, h.MauHangHex, h.DiemToiThieu
              ORDER BY h.DiemToiThieu ASC", []
         );
@@ -74,6 +77,7 @@ class AdminApiController extends ApiController
             "SELECT FORMAT(nd.NgayTao, 'yyyy-MM') as thang, COUNT(*) as soLuong
              FROM NguoiDung nd
              WHERE nd.MaVaiTro = 4
+               AND nd.IsDeleted = 0
                AND nd.NgayTao >= DATEADD(MONTH, -6, GETDATE())
              GROUP BY FORMAT(nd.NgayTao, 'yyyy-MM')
              ORDER BY thang ASC", []
@@ -85,14 +89,16 @@ class AdminApiController extends ApiController
                     bn.HoTen AS TenBenhNhan
              FROM DanhGia dg
              INNER JOIN BenhNhan bn ON dg.MaBenhNhan = bn.MaBenhNhan
+             WHERE bn.IsDeleted = 0
              ORDER BY dg.NgayDanhGia DESC", []
         );
 
-        // Doanh thu tháng hiện tại
+        // Doanh thu tháng hiện tại (TongTien đã bao gồm trừ GiamGia)
         $doanhThuThang = Database::fetchOne(
             "SELECT ISNULL(SUM(TongTien), 0) as total
              FROM HoaDon
              WHERE TrangThai = 1
+               AND IsDeleted = 0
                AND MONTH(NgayThanhToan) = MONTH(GETDATE())
                AND YEAR(NgayThanhToan) = YEAR(GETDATE())", []
         );
@@ -326,11 +332,11 @@ class AdminApiController extends ApiController
         $offset = $this->getOffset($page, $limit);
         $search = $_GET['q'] ?? '';
 
-        $where = "";
+        $where = "WHERE bn.IsDeleted = 0";
         $params = [];
 
         if (!empty($search)) {
-            $where = "WHERE bn.HoTen LIKE ? OR bn.SoDienThoai LIKE ?";
+            $where .= " AND (bn.HoTen LIKE ? OR bn.SoDienThoai LIKE ?)";
             $params[] = "%{$search}%";
             $params[] = "%{$search}%";
         }
@@ -380,7 +386,7 @@ class AdminApiController extends ApiController
              FROM ThanhVienInfo tv
              INNER JOIN BenhNhan bn ON tv.MaBenhNhan = bn.MaBenhNhan
              LEFT JOIN HangThanhVien h ON tv.MaHang = h.MaHang
-             WHERE tv.MaThanhVien = ?", [$id]
+             WHERE tv.MaThanhVien = ? AND bn.IsDeleted = 0", [$id]
         );
 
         if (!$tv) {

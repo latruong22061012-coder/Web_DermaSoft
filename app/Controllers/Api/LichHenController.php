@@ -165,7 +165,7 @@ class LichHenController extends ApiController
         // Tạo lịch hẹn
         $appointmentId = LichHen::createAppointment([
             'MaBenhNhan' => (int)$data['ma_benhnhan'],
-            'MaBacSi' => (int)$data['ma_bacsi'],
+            'MaNguoiDung' => (int)$data['ma_bacsi'],
             'ThoiGianHen' => $data['thoigian_hen'],
             'GhiChu' => $data['ghi_chu'] ?? ''
         ]);

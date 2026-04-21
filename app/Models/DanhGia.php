@@ -75,10 +75,10 @@ class DanhGia
     {
         $offset = ($page - 1) * $limit;
 
-        $query = "SELECT dg.*, pk.NgayKham, pk.ChanDoan, nv.HoTen as BacSiTen
+        $query = "SELECT dg.*, pk.NgayKham, pk.ChanDoan, nd.HoTen as BacSiTen
                   FROM DanhGia dg
                   LEFT JOIN PhieuKham pk ON dg.MaPhieuKham = pk.MaPhieuKham
-                  LEFT JOIN NhanVien nv ON pk.MaBacSi = nv.MaNhanVien
+                  LEFT JOIN NguoiDung nd ON pk.MaNguoiDung = nd.MaNguoiDung
                   WHERE dg.MaBenhNhan = :MaBenhNhan
                   ORDER BY dg.NgayDanhGia DESC
                   OFFSET :Offset ROWS FETCH NEXT :Limit ROWS ONLY";
@@ -95,11 +95,11 @@ class DanhGia
      */
     public function getById($maDanhGia): ?array
     {
-        $query = "SELECT dg.*, bn.HoTen, bn.SoDienThoai, pk.NgayKham, nv.HoTen as BacSiTen
+        $query = "SELECT dg.*, bn.HoTen, bn.SoDienThoai, pk.NgayKham, nd.HoTen as BacSiTen
                   FROM DanhGia dg
                   LEFT JOIN BenhNhan bn ON dg.MaBenhNhan = bn.MaBenhNhan
                   LEFT JOIN PhieuKham pk ON dg.MaPhieuKham = pk.MaPhieuKham
-                  LEFT JOIN NhanVien nv ON pk.MaBacSi = nv.MaNhanVien
+                  LEFT JOIN NguoiDung nd ON pk.MaNguoiDung = nd.MaNguoiDung
                   WHERE dg.MaDanhGia = :MaDanhGia";
 
         $result = Database::fetchOne($query, [':MaDanhGia' => $maDanhGia]);
@@ -160,21 +160,21 @@ class DanhGia
     /**
      * Lấy điểm đánh giá trung bình của một bác sĩ
      */
-    public function getAverageByBacSi($maBacSi): float
+    public function getAverageByBacSi($maNguoiDung): float
     {
         $query = "SELECT AVG(CAST(DiemDanh AS FLOAT)) as AvgScore
                   FROM DanhGia dg
                   JOIN PhieuKham pk ON dg.MaPhieuKham = pk.MaPhieuKham
-                  WHERE pk.MaBacSi = :MaBacSi";
+                  WHERE pk.MaNguoiDung = :MaNguoiDung";
 
-        $result = Database::fetchOne($query, [':MaBacSi' => $maBacSi]);
+        $result = Database::fetchOne($query, [':MaNguoiDung' => $maNguoiDung]);
         return $result ? (float)$result['AvgScore'] : 0.0;
     }
 
     /**
      * Lấy đánh giá của bác sĩ (với phân trang)
      */
-    public function getByBacSi($maBacSi, $page = 1, $limit = 10): array
+    public function getByBacSi($maNguoiDung, $page = 1, $limit = 10): array
     {
         $offset = ($page - 1) * $limit;
 
@@ -182,12 +182,12 @@ class DanhGia
                   FROM DanhGia dg
                   JOIN PhieuKham pk ON dg.MaPhieuKham = pk.MaPhieuKham
                   LEFT JOIN BenhNhan bn ON dg.MaBenhNhan = bn.MaBenhNhan
-                  WHERE pk.MaBacSi = :MaBacSi
+                  WHERE pk.MaNguoiDung = :MaNguoiDung
                   ORDER BY dg.NgayDanhGia DESC
                   OFFSET :Offset ROWS FETCH NEXT :Limit ROWS ONLY";
 
         return Database::fetchAll($query, [
-            ':MaBacSi' => $maBacSi,
+            ':MaNguoiDung' => $maNguoiDung,
             ':Offset' => $offset,
             ':Limit' => $limit
         ]);
@@ -217,11 +217,11 @@ class DanhGia
     {
         $offset = ($page - 1) * $limit;
 
-        $query = "SELECT dg.*, bn.HoTen as KhachHang, nv.HoTen as BacSi, pk.ChanDoan
+        $query = "SELECT dg.*, bn.HoTen as KhachHang, nd.HoTen as BacSi, pk.ChanDoan
                   FROM DanhGia dg
                   LEFT JOIN BenhNhan bn ON dg.MaBenhNhan = bn.MaBenhNhan
                   LEFT JOIN PhieuKham pk ON dg.MaPhieuKham = pk.MaPhieuKham
-                  LEFT JOIN NhanVien nv ON pk.MaBacSi = nv.MaNhanVien
+                  LEFT JOIN NguoiDung nd ON pk.MaNguoiDung = nd.MaNguoiDung
                   ORDER BY dg.NgayDanhGia DESC
                   OFFSET :Offset ROWS FETCH NEXT :Limit ROWS ONLY";
 
@@ -254,11 +254,11 @@ class DanhGia
      */
     public function getLatestRatings($limit = 5): array
     {
-        $query = "SELECT TOP :Limit dg.*, bn.HoTen, nv.HoTen as BacSiTen
+        $query = "SELECT TOP :Limit dg.*, bn.HoTen, nd.HoTen as BacSiTen
                   FROM DanhGia dg
                   LEFT JOIN BenhNhan bn ON dg.MaBenhNhan = bn.MaBenhNhan
                   LEFT JOIN PhieuKham pk ON dg.MaPhieuKham = pk.MaPhieuKham
-                  LEFT JOIN NhanVien nv ON pk.MaBacSi = nv.MaNhanVien
+                  LEFT JOIN NguoiDung nd ON pk.MaNguoiDung = nd.MaNguoiDung
                   ORDER BY dg.NgayDanhGia DESC";
 
         return Database::fetchAll($query, [':Limit' => $limit]);

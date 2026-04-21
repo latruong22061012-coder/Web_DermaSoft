@@ -57,7 +57,13 @@ class Database
         // Bind từng param với kiểu dữ liệu đúng (SQL Server yêu cầu integer cho TOP/OFFSET/FETCH)
         foreach ($params as $index => $value) {
             $type = is_int($value) ? \PDO::PARAM_INT : (is_null($value) ? \PDO::PARAM_NULL : \PDO::PARAM_STR);
-            $stmt->bindValue($index + 1, $value, $type);
+            if (is_string($index)) {
+                // Named parameter (e.g. :SoDienThoai)
+                $stmt->bindValue($index, $value, $type);
+            } else {
+                // Positional parameter (e.g. ?)
+                $stmt->bindValue($index + 1, $value, $type);
+            }
         }
         $stmt->execute();
         return $stmt;

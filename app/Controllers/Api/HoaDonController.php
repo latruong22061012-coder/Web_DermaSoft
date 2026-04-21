@@ -173,11 +173,8 @@ class HoaDonController extends ApiController
         // Tạo hóa đơn
         $invoiceId = HoaDon::create([
             'MaPhieuKham' => (int)$data['ma_phieukham'],
-            'MaBenhNhan' => (int)$data['ma_benhnhan'],
-            'MaBacSi' => (int)$data['ma_bacsi'],
-            'NgayTao' => date('Y-m-d H:i:s'),
             'TongTien' => (float)$data['tongtien'],
-            'GhiChu' => $data['ghichu'] ?? '',
+            'TienKhachTra' => (float)($data['tienkhachtra'] ?? 0),
             'TrangThai' => 0  // 0 = chưa thanh toán
         ]);
 

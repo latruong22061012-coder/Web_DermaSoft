@@ -73,8 +73,8 @@ class ThanhVienInfoController extends ApiController
         }
 
         // Lấy thông tin cấp thành viên
-        if (isset($member['MaHangThanhVien'])) {
-            $tier = HangThanhVien::getById($member['MaHangThanhVien']);
+        if (isset($member['MaHang'])) {
+            $tier = HangThanhVien::getById($member['MaHang']);
             $member['tier_info'] = $tier;
         }
 
@@ -113,8 +113,8 @@ class ThanhVienInfoController extends ApiController
         }
 
         // Lấy thông tin cấp thành viên
-        if (isset($member['MaHangThanhVien'])) {
-            $tier = HangThanhVien::getById($member['MaHangThanhVien']);
+        if (isset($member['MaHang'])) {
+            $tier = HangThanhVien::getById($member['MaHang']);
             $member['tier_info'] = $tier;
         }
 
@@ -160,9 +160,8 @@ class ThanhVienInfoController extends ApiController
         // Tạo thành viên mới (mặc định cấp Bronze)
         $memberId = ThanhVienInfo::create([
             'MaBenhNhan' => (int)$data['ma_benhnhan'],
-            'MaHangThanhVien' => 1,  // Bronze tier
-            'DiemThuong' => 0,
-            'NgayDangKy' => date('Y-m-d H:i:s')
+            'MaHang' => 1,  // Bronze tier
+            'DiemTichLuy' => 0
         ]);
 
         if (!$memberId) {

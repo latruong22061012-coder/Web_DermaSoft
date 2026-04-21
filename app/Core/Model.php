@@ -44,8 +44,8 @@ abstract class Model
     {
         $table = static::$table;
         
-        $sql = "SELECT * FROM $table ORDER BY " . static::$primaryKey . " DESC LIMIT ? OFFSET ?";
-        return Database::fetchAll($sql, [$limit, $offset]);
+        $sql = "SELECT * FROM $table ORDER BY " . static::$primaryKey . " DESC OFFSET ? ROWS FETCH NEXT ? ROWS ONLY";
+        return Database::fetchAll($sql, [$offset, $limit]);
     }
 
     /**

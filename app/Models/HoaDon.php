@@ -41,7 +41,9 @@ class HoaDon extends Model
      */
     public static function getByPatientId(int $patientId): array
     {
-        $sql = "SELECT * FROM HoaDon WHERE MaBenhNhan = ? ORDER BY MaHoaDon DESC";
+        $sql = "SELECT hd.* FROM HoaDon hd
+                INNER JOIN PhieuKham pk ON hd.MaPhieuKham = pk.MaPhieuKham
+                WHERE pk.MaBenhNhan = ? ORDER BY hd.MaHoaDon DESC";
         return self::query($sql, [$patientId]);
     }
 
@@ -50,7 +52,7 @@ class HoaDon extends Model
      */
     public static function getUnpaidInvoices(): array
     {
-        $sql = "SELECT * FROM HoaDon WHERE TrangThai = 0 ORDER BY MaHoaDon DESC";
+        $sql = "SELECT * FROM HoaDon WHERE TrangThai = 0 AND IsDeleted = 0 ORDER BY MaHoaDon DESC";
         return self::query($sql);
     }
 
@@ -59,7 +61,7 @@ class HoaDon extends Model
      */
     public static function getPaidInvoices(): array
     {
-        $sql = "SELECT * FROM HoaDon WHERE TrangThai = 1 ORDER BY MaHoaDon DESC";
+        $sql = "SELECT * FROM HoaDon WHERE TrangThai = 1 AND IsDeleted = 0 ORDER BY MaHoaDon DESC";
         return self::query($sql);
     }
 
@@ -113,7 +115,7 @@ class HoaDon extends Model
      */
     public static function getTotalRevenue(?string $fromDate = null, ?string $toDate = null): float
     {
-        $sql = "SELECT COALESCE(SUM(TongTien), 0) as total FROM HoaDon WHERE TrangThai = 1";
+        $sql = "SELECT COALESCE(SUM(TongTien), 0) as total FROM HoaDon WHERE TrangThai = 1 AND IsDeleted = 0";
         
         if ($fromDate && $toDate) {
             $sql .= " AND NgayThanhToan BETWEEN ? AND ?";
@@ -130,7 +132,7 @@ class HoaDon extends Model
      */
     public static function getDailyRevenue(string $date): float
     {
-        $sql = "SELECT COALESCE(SUM(TongTien), 0) as total FROM HoaDon WHERE TrangThai = 1 AND CAST(NgayThanhToan AS DATE) = ?";
+        $sql = "SELECT COALESCE(SUM(TongTien), 0) as total FROM HoaDon WHERE TrangThai = 1 AND IsDeleted = 0 AND CAST(NgayThanhToan AS DATE) = ?";
         $result = self::queryOne($sql, [$date]);
         return $result['total'] ?? 0;
     }

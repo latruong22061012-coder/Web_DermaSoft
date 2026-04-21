@@ -22,7 +22,7 @@
                         <th>SĐT</th>
                         <th>Hạng</th>
                         <th>Điểm tích lũy</th>
-                        <th>Điểm thưởng</th>
+                        <th>Số lần khám</th>
                         <th>Tỷ lệ hài lòng</th>
                         <th>Thao tác</th>
                     </tr>
@@ -56,8 +56,8 @@
                         <input type="number" class="form-control" id="editDiemTL" min="0">
                     </div>
                     <div class="col-6">
-                        <label class="form-label fw-medium">Điểm thưởng</label>
-                        <input type="number" class="form-control" id="editDiemThuong" min="0">
+                        <label class="form-label fw-medium">Số lần khám</label>
+                        <input type="number" class="form-control" id="editSoLanKham" min="0">
                     </div>
                 </div>
             </div>
@@ -122,10 +122,10 @@
                 '<td>' + (tv.SoDienThoai || '—') + '</td>' +
                 '<td>' + hangHtml + '</td>' +
                 '<td class="fw-medium">' + formatNumber(tv.DiemTichLuy || 0) + '</td>' +
-                '<td>' + formatNumber(tv.DiemThuong || 0) + '</td>' +
+                '<td>' + formatNumber(tv.SoLanKham || 0) + '</td>' +
                 '<td>' + tyLe + '</td>' +
                 '<td>' +
-                    '<button class="btn btn-sm btn-outline-primary rounded-pill px-2" title="Sửa điểm" onclick="openEdit(' + tv.MaThanhVien + ',\'' + (tv.HoTen || '').replace(/'/g, "\\'") + '\',' + (tv.DiemTichLuy || 0) + ',' + (tv.DiemThuong || 0) + ')">' +
+                    '<button class="btn btn-sm btn-outline-primary rounded-pill px-2" title="Sửa điểm" onclick="openEdit(' + tv.MaThanhVien + ',\'' + (tv.HoTen || '').replace(/'/g, "\\'") + '\',' + (tv.DiemTichLuy || 0) + ',' + (tv.SoLanKham || 0) + ')">' +
                         '<i class="bi bi-pencil"></i>' +
                     '</button>' +
                 '</td>' +
@@ -168,11 +168,11 @@
     };
 
     // Mở modal sửa điểm
-    window.openEdit = function(id, name, diemTL, diemThuong) {
+    window.openEdit = function(id, name, diemTL, soLanKham) {
         document.getElementById('editId').value = id;
         document.getElementById('editName').value = name;
         document.getElementById('editDiemTL').value = diemTL;
-        document.getElementById('editDiemThuong').value = diemThuong;
+        document.getElementById('editSoLanKham').value = soLanKham;
         bootstrap.Modal.getOrCreateInstance(document.getElementById('modalEdit')).show();
     };
 
@@ -180,11 +180,11 @@
     document.getElementById('btnSaveEdit').addEventListener('click', function() {
         var id = document.getElementById('editId').value;
         var diemTL = parseInt(document.getElementById('editDiemTL').value) || 0;
-        var diemThuong = parseInt(document.getElementById('editDiemThuong').value) || 0;
+        var soLanKham = parseInt(document.getElementById('editSoLanKham').value) || 0;
 
         adminFetch('thanh-vien/' + id, {
             method: 'PUT',
-            body: { DiemTichLuy: diemTL, DiemThuong: diemThuong }
+            body: { DiemTichLuy: diemTL, SoLanKham: soLanKham }
         }).then(function(res) {
             if (res.status === 200) {
                 adminToast(res.message, 'success');

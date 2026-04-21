@@ -41,7 +41,7 @@ class PhieuKham extends Model
      */
     public static function getByDoctorId(int $doctorId): array
     {
-        return self::findAllBy('MaBacSi', $doctorId);
+        return self::findAllBy('MaNguoiDung', $doctorId);
     }
 
     /**
@@ -59,7 +59,7 @@ class PhieuKham extends Model
     {
         return self::create([
             'MaBenhNhan' => $data['MaBenhNhan'] ?? 0,
-            'MaBacSi' => $data['MaBacSi'] ?? 0,
+            'MaNguoiDung' => $data['MaNguoiDung'] ?? 0,
             'MaLichHen' => $data['MaLichHen'] ?? null,
             'NgayKham' => $data['NgayKham'] ?? 'GETDATE()',
             'TrieuChung' => $data['TrieuChung'] ?? '',
@@ -86,7 +86,6 @@ class PhieuKham extends Model
         $updates = [];
         if (isset($data['TrieuChung'])) $updates['TrieuChung'] = $data['TrieuChung'];
         if (isset($data['ChanDoan'])) $updates['ChanDoan'] = $data['ChanDoan'];
-        if (isset($data['HuongDieuTri'])) $updates['HuongDieuTri'] = $data['HuongDieuTri'];
         if (isset($data['NgayHen_TaiKham'])) $updates['NgayTaiKham'] = $data['NgayHen_TaiKham'];
         
         $updates['TrangThai'] = 1;
@@ -127,15 +126,14 @@ class PhieuKham extends Model
         global $db;
         if (!$db) return false;
 
-        $sql = "INSERT INTO ChiTietDichVu (MaPhieuKham, MaDichVu, SoLuong, DonGia, ThanhTien) 
-                VALUES (?, ?, ?, ?, ?)";
+        $sql = "INSERT INTO ChiTietDichVu (MaPhieuKham, MaDichVu, SoLuong, ThanhTien) 
+                VALUES (?, ?, ?, ?)";
         
         $stmt = $db->prepare($sql);
         return $stmt->execute([
             $id,
             $service['ma_dichvu'] ?? 0,
             $service['soluong'] ?? 1,
-            $service['dongia'] ?? 0,
             $service['thanhtien'] ?? 0
         ]);
     }

@@ -52,13 +52,13 @@ class AuthController extends ApiController
         $user = Auth::getCurrentUser();
         
         // Nếu cần, tạo token cho Windows App
-        $token = Auth::generateToken($user['MaNhanVien']);
+        $token = Auth::generateToken($user['MaNguoiDung']);
 
         $this->logAccess("Login - Username: {$data['username']}");
 
         $this->success([
             'user' => [
-                'id' => $user['MaNhanVien'],
+                'id' => $user['MaNguoiDung'],
                 'name' => $user['HoTen'],
                 'username' => $user['TenDangNhap'],
                 'email' => $user['Email'],
@@ -132,14 +132,14 @@ class AuthController extends ApiController
         }
 
         // Kiểm tra mật khẩu cũ
-        $userModel = User::findById($user['MaNhanVien']);
+        $userModel = User::findById($user['MaNguoiDung']);
         if (!password_verify($data['old_password'], $userModel['MatKhau'])) {
             $this->error('Mật khẩu cũ không đúng', null, 401);
         }
 
         // Cập nhật mật khẩu
-        if (User::updatePassword($user['MaNhanVien'], $data['new_password'])) {
-            $this->logAccess("Change password - User ID: {$user['MaNhanVien']}");
+        if (User::updatePassword($user['MaNguoiDung'], $data['new_password'])) {
+            $this->logAccess("Change password - User ID: {$user['MaNguoiDung']}");
             $this->success(null, 'Đổi mật khẩu thành công');
         } else {
             $this->internalError('Không thể đổi mật khẩu');
@@ -401,18 +401,18 @@ class AuthController extends ApiController
             }
 
             // Setup session
-            $_SESSION['user_id'] = $user['MaNhanVien'];
+            $_SESSION['user_id'] = $user['MaNguoiDung'];
             $_SESSION['username'] = $user['TenDangNhap'];
             $_SESSION['phone'] = $data['sodienthoai'];
 
             // Tạo token
-            $token = Auth::generateToken($user['MaNhanVien']);
+            $token = Auth::generateToken($user['MaNguoiDung']);
 
             $this->logAccess("OTP Login - Phone: {$data['sodienthoai']}, Username: {$user['TenDangNhap']}");
 
             $this->success([
                 'user' => [
-                    'id' => $user['MaNhanVien'],
+                    'id' => $user['MaNguoiDung'],
                     'name' => $user['HoTen'],
                     'username' => $user['TenDangNhap'],
                     'email' => $user['Email'],
@@ -539,7 +539,7 @@ class AuthController extends ApiController
             }
 
             // Update password (User model sẽ hash nó)
-            $userModel->updatePassword($user['MaNhanVien'], $data['new_password']);
+            $userModel->updatePassword($user['MaNguoiDung'], $data['new_password']);
 
             $this->logAccess("Password Reset - Phone: {$data['sodienthoai']}");
 
