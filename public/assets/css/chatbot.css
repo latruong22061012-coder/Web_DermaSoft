@@ -1,0 +1,585 @@
+/* ──────────────────────────────────────────────────────────
+   DarmaBot — Chatbot widget styles (v3 — match site theme)
+   Tông màu chủ đạo: xanh mòng két + gold (đồng bộ style.css)
+   ────────────────────────────────────────────────────────── */
+
+:root {
+  --dbot-primary: #0f5c4d; /* Xanh mòng két đậm */
+  --dbot-primary-dark: #0a3f36; /* Xanh đậm hơn cho hover */
+  --dbot-primary-light: #ddf5ea; /* Mint nhạt */
+  --dbot-accent: #b88a28; /* Gold strict */
+  --dbot-accent-soft: #d7b66f; /* Gold soft */
+  --dbot-bg: #f6faf8; /* Nền body chat */
+  --dbot-surface: #ffffff; /* Nền tin nhắn bot */
+  --dbot-text: #1f2d29; /* Chữ chính */
+  --dbot-muted: #5a6c66; /* Chữ phụ */
+  --dbot-border: #d6e8e0; /* Viền nhẹ */
+  --dbot-shadow:
+    0 24px 60px -10px rgba(9, 49, 41, 0.28),
+    0 8px 20px -6px rgba(9, 49, 41, 0.16);
+}
+
+/* ── Floating bubble ─────────────────────────────────────── */
+.dbot-bubble {
+  position: fixed;
+  right: 24px;
+  bottom: 24px;
+  width: 64px;
+  height: 64px;
+  border-radius: 50%;
+  background: linear-gradient(
+    135deg,
+    var(--dbot-primary) 0%,
+    var(--dbot-primary-dark) 100%
+  );
+  color: #fff;
+  border: none;
+  box-shadow:
+    0 14px 36px rgba(15, 92, 77, 0.45),
+    inset 0 1px 0 rgba(255, 255, 255, 0.3);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 30px;
+  cursor: pointer;
+  z-index: 1050;
+  transition:
+    transform 0.25s cubic-bezier(0.34, 1.56, 0.64, 1),
+    box-shadow 0.25s ease;
+}
+.dbot-bubble::before {
+  content: "";
+  position: absolute;
+  inset: -6px;
+  border-radius: 50%;
+  border: 2px solid var(--dbot-primary);
+  opacity: 0;
+  animation: dbot-pulse 2.4s ease-out infinite;
+}
+@keyframes dbot-pulse {
+  0% {
+    opacity: 0.6;
+    transform: scale(0.9);
+  }
+  100% {
+    opacity: 0;
+    transform: scale(1.35);
+  }
+}
+.dbot-bubble:hover {
+  transform: scale(1.08) translateY(-2px);
+  box-shadow: 0 18px 44px rgba(15, 92, 77, 0.6);
+}
+.dbot-bubble:active {
+  transform: scale(0.96);
+}
+.dbot-bubble[aria-expanded="true"] {
+  transform: rotate(90deg) scale(0.9);
+}
+.dbot-bubble[aria-expanded="true"]::before {
+  display: none;
+}
+
+.dbot-bubble .dbot-dot {
+  position: absolute;
+  top: 8px;
+  right: 10px;
+  width: 12px;
+  height: 12px;
+  border-radius: 50%;
+  background: #4caf50;
+  box-shadow:
+    0 0 0 3px #fff,
+    0 0 8px rgba(76, 175, 80, 0.5);
+}
+
+/* ── Panel ───────────────────────────────────────────────── */
+.dbot-panel {
+  position: fixed;
+  right: 24px;
+  bottom: 104px;
+  width: 380px;
+  max-width: calc(100vw - 32px);
+  height: 580px;
+  max-height: calc(100vh - 130px);
+  background: var(--dbot-surface);
+  border-radius: 20px;
+  box-shadow: var(--dbot-shadow);
+  display: none;
+  flex-direction: column;
+  overflow: hidden;
+  z-index: 1050;
+  font-family: "Montserrat", system-ui, sans-serif;
+  color: var(--dbot-text);
+}
+.dbot-panel.dbot-open {
+  display: flex;
+  animation: dbot-slide-up 0.32s cubic-bezier(0.16, 1, 0.3, 1) both;
+}
+@keyframes dbot-slide-up {
+  from {
+    opacity: 0;
+    transform: translateY(20px) scale(0.96);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0) scale(1);
+  }
+}
+
+/* ── Header ──────────────────────────────────────────────── */
+.dbot-header {
+  position: relative;
+  background: linear-gradient(
+    135deg,
+    var(--dbot-primary) 0%,
+    var(--dbot-primary-dark) 100%
+  );
+  color: #fff;
+  padding: 16px 18px;
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  overflow: hidden;
+}
+.dbot-header::after {
+  content: "";
+  position: absolute;
+  inset: 0;
+  background: radial-gradient(
+    circle at top right,
+    rgba(255, 255, 255, 0.18) 0%,
+    transparent 60%
+  );
+  pointer-events: none;
+}
+.dbot-header > * {
+  position: relative;
+  z-index: 1;
+}
+
+.dbot-header .dbot-avatar {
+  width: 40px;
+  height: 40px;
+  border-radius: 50%;
+  background: rgba(255, 255, 255, 0.22);
+  backdrop-filter: blur(6px);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 20px;
+  position: relative;
+  border: 1px solid rgba(255, 255, 255, 0.25);
+}
+.dbot-header .dbot-avatar::after {
+  content: "";
+  position: absolute;
+  right: -1px;
+  bottom: -1px;
+  width: 11px;
+  height: 11px;
+  border-radius: 50%;
+  background: #4caf50;
+  border: 2px solid var(--dbot-primary-dark);
+}
+.dbot-header .dbot-title {
+  font-weight: 700;
+  font-size: 15.5px;
+  line-height: 1.2;
+  letter-spacing: 0.2px;
+}
+.dbot-header .dbot-sub {
+  font-size: 11.5px;
+  opacity: 0.9;
+  margin-top: 2px;
+  display: flex;
+  align-items: center;
+  gap: 4px;
+}
+.dbot-header .dbot-actions {
+  margin-left: auto;
+  display: flex;
+  gap: 6px;
+}
+.dbot-header .dbot-actions button {
+  background: rgba(255, 255, 255, 0.18);
+  border: none;
+  color: #fff;
+  width: 32px;
+  height: 32px;
+  border-radius: 50%;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition:
+    background 0.18s,
+    transform 0.18s;
+  font-size: 14px;
+}
+.dbot-header .dbot-actions button:hover {
+  background: rgba(255, 255, 255, 0.35);
+  transform: rotate(-10deg);
+}
+.dbot-header .dbot-actions button:active {
+  transform: scale(0.92);
+}
+
+/* ── Body / messages ─────────────────────────────────────── */
+.dbot-body {
+  flex: 1;
+  overflow-y: auto;
+  padding: 16px 14px;
+  background: linear-gradient(180deg, var(--dbot-bg) 0%, #fff 100%);
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  scroll-behavior: smooth;
+}
+.dbot-body::-webkit-scrollbar {
+  width: 6px;
+}
+.dbot-body::-webkit-scrollbar-track {
+  background: transparent;
+}
+.dbot-body::-webkit-scrollbar-thumb {
+  background: var(--dbot-primary-light);
+  border-radius: 3px;
+}
+.dbot-body::-webkit-scrollbar-thumb:hover {
+  background: var(--dbot-primary);
+}
+
+.dbot-msg {
+  max-width: 82%;
+  padding: 10px 14px;
+  border-radius: 16px;
+  font-size: 13.5px;
+  line-height: 1.5;
+  white-space: pre-wrap;
+  word-wrap: break-word;
+  animation: dbot-msg-in 0.28s cubic-bezier(0.16, 1, 0.3, 1) both;
+  position: relative;
+}
+@keyframes dbot-msg-in {
+  from {
+    opacity: 0;
+    transform: translateY(8px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+.dbot-msg.user {
+  align-self: flex-end;
+  background: linear-gradient(
+    135deg,
+    var(--dbot-primary) 0%,
+    var(--dbot-primary-dark) 100%
+  );
+  color: #fff;
+  border-bottom-right-radius: 6px;
+  box-shadow: 0 4px 14px rgba(15, 92, 77, 0.28);
+}
+.dbot-msg.bot {
+  align-self: flex-start;
+  background: #fff;
+  color: var(--dbot-text);
+  border: 1px solid var(--dbot-border);
+  border-bottom-left-radius: 6px;
+  box-shadow: 0 2px 8px rgba(9, 49, 41, 0.06);
+}
+.dbot-msg.bot p {
+  margin: 0 0 6px;
+}
+.dbot-msg.bot p:last-child {
+  margin-bottom: 0;
+}
+.dbot-msg.bot ul,
+.dbot-msg.bot ol {
+  margin: 6px 0 0 18px;
+  padding: 0;
+}
+.dbot-msg.bot li {
+  margin-bottom: 3px;
+}
+.dbot-msg.bot strong {
+  color: var(--dbot-accent);
+  font-weight: 700;
+}
+.dbot-msg.bot code {
+  background: var(--dbot-primary-light);
+  padding: 1px 6px;
+  border-radius: 4px;
+  font-size: 12.5px;
+  color: var(--dbot-primary-dark);
+}
+.dbot-msg.bot a {
+  color: var(--dbot-primary-dark);
+  text-decoration: underline;
+  text-underline-offset: 2px;
+}
+.dbot-msg.error {
+  background: #fff5f5;
+  border-color: #f3c2c2;
+  color: #b03a3a;
+}
+.dbot-msg.system {
+  align-self: center;
+  background: transparent;
+  color: var(--dbot-muted);
+  font-size: 12px;
+  font-style: italic;
+  max-width: 92%;
+  text-align: center;
+  padding: 6px 12px;
+  animation: none;
+}
+
+/* Typing dots */
+.dbot-typing {
+  align-self: flex-start;
+  display: flex;
+  gap: 5px;
+  padding: 12px 16px;
+  background: #fff;
+  border: 1px solid var(--dbot-border);
+  border-radius: 16px;
+  border-bottom-left-radius: 6px;
+  box-shadow: 0 2px 8px rgba(9, 49, 41, 0.06);
+}
+.dbot-typing span {
+  width: 7px;
+  height: 7px;
+  border-radius: 50%;
+  background: var(--dbot-primary);
+  animation: dbot-blink 1.3s infinite ease-in-out;
+}
+.dbot-typing span:nth-child(2) {
+  animation-delay: 0.18s;
+}
+.dbot-typing span:nth-child(3) {
+  animation-delay: 0.36s;
+}
+@keyframes dbot-blink {
+  0%,
+  80%,
+  100% {
+    transform: scale(0.65);
+    opacity: 0.35;
+  }
+  40% {
+    transform: scale(1);
+    opacity: 1;
+  }
+}
+
+/* ── Suggestions ─────────────────────────────────────────── */
+.dbot-suggestions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+  padding: 10px 14px;
+  background: #fff;
+  border-top: 1px solid var(--dbot-border);
+  max-height: 200px;
+  overflow: hidden;
+  transition:
+    max-height 0.32s ease,
+    padding 0.32s ease,
+    opacity 0.25s ease;
+}
+.dbot-suggestions:empty {
+  display: none;
+}
+.dbot-suggestions.dbot-suggestions-hidden {
+  max-height: 0;
+  padding-top: 0;
+  padding-bottom: 0;
+  opacity: 0;
+  border-top: 0;
+  pointer-events: none;
+}
+.dbot-suggestions button {
+  background: #fff;
+  border: 1px solid var(--dbot-border);
+  color: var(--dbot-primary-dark);
+  padding: 6px 12px;
+  border-radius: 18px;
+  font-size: 12px;
+  font-weight: 500;
+  cursor: pointer;
+  transition: all 0.18s;
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+}
+.dbot-suggestions button:hover {
+  background: linear-gradient(
+    135deg,
+    var(--dbot-primary) 0%,
+    var(--dbot-primary-dark) 100%
+  );
+  color: #fff;
+  border-color: transparent;
+  transform: translateY(-1px);
+  box-shadow: 0 4px 10px rgba(15, 92, 77, 0.3);
+}
+
+/* ── Input ───────────────────────────────────────────────── */
+.dbot-input {
+  display: flex;
+  gap: 8px;
+  padding: 12px 14px 14px;
+  background: #fff;
+  border-top: 1px solid var(--dbot-border);
+  align-items: flex-end;
+}
+.dbot-input textarea {
+  flex: 1;
+  border: 1.5px solid var(--dbot-border);
+  border-radius: 22px;
+  padding: 10px 16px;
+  font-size: 13.5px;
+  resize: none;
+  max-height: 100px;
+  min-height: 42px;
+  font-family: inherit;
+  outline: none;
+  transition:
+    border-color 0.18s,
+    box-shadow 0.18s;
+  background: var(--dbot-bg);
+  color: var(--dbot-text);
+}
+.dbot-input textarea:focus {
+  border-color: var(--dbot-primary);
+  background: #fff;
+  box-shadow: 0 0 0 4px rgba(15, 92, 77, 0.15);
+}
+.dbot-input textarea::placeholder {
+  color: #9ab0a8;
+}
+
+.dbot-input button {
+  width: 42px;
+  height: 42px;
+  border-radius: 50%;
+  background: linear-gradient(
+    135deg,
+    var(--dbot-primary) 0%,
+    var(--dbot-primary-dark) 100%
+  );
+  color: #fff;
+  border: none;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition:
+    transform 0.18s,
+    box-shadow 0.18s,
+    background 0.18s;
+  flex-shrink: 0;
+  font-size: 15px;
+  box-shadow: 0 4px 12px rgba(15, 92, 77, 0.32);
+}
+.dbot-input button:hover:not(:disabled) {
+  transform: scale(1.08);
+  box-shadow: 0 6px 18px rgba(15, 92, 77, 0.48);
+}
+.dbot-input button:active:not(:disabled) {
+  transform: scale(0.95);
+}
+.dbot-input button:disabled {
+  background: #d4cabe;
+  cursor: not-allowed;
+  box-shadow: none;
+}
+
+/* ── Login CTA (chưa đăng nhập) ──────────────────────────── */
+.dbot-login-cta {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  padding: 32px 24px;
+  text-align: center;
+  color: var(--dbot-muted);
+  font-size: 14px;
+  line-height: 1.5;
+  background: linear-gradient(180deg, var(--dbot-bg) 0%, #fff 100%);
+}
+.dbot-login-cta i {
+  font-size: 52px;
+  color: var(--dbot-primary);
+  margin-bottom: 14px;
+  background: var(--dbot-primary-light);
+  width: 88px;
+  height: 88px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: 50%;
+}
+.dbot-login-cta a {
+  display: inline-block;
+  margin-top: 16px;
+  padding: 10px 24px;
+  background: linear-gradient(
+    135deg,
+    var(--dbot-primary) 0%,
+    var(--dbot-primary-dark) 100%
+  );
+  color: #fff;
+  border-radius: 22px;
+  text-decoration: none;
+  font-size: 13px;
+  font-weight: 600;
+  box-shadow: 0 6px 16px rgba(15, 92, 77, 0.4);
+  transition:
+    transform 0.18s,
+    box-shadow 0.18s;
+}
+.dbot-login-cta a:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 8px 20px rgba(15, 92, 77, 0.55);
+  color: #fff;
+}
+
+/* ── Mobile ──────────────────────────────────────────────── */
+@media (max-width: 480px) {
+  .dbot-panel {
+    right: 10px;
+    left: 10px;
+    bottom: 88px;
+    width: auto;
+    height: calc(100vh - 110px);
+    border-radius: 18px;
+  }
+  .dbot-bubble {
+    right: 16px;
+    bottom: 16px;
+    width: 58px;
+    height: 58px;
+    font-size: 26px;
+  }
+  .dbot-msg {
+    max-width: 88%;
+  }
+}
+
+/* ── Reduced motion ──────────────────────────────────────── */
+@media (prefers-reduced-motion: reduce) {
+  .dbot-bubble::before {
+    animation: none;
+  }
+  .dbot-panel.dbot-open {
+    animation: none;
+  }
+  .dbot-msg {
+    animation: none;
+  }
+}

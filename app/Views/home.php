@@ -32,6 +32,7 @@ $gioDongDisplay = $gioDong ? substr($gioDong, 0, 5) : '';
     <link href="<?= defined('BASE_URL') ? BASE_URL : '/' ?>public/assets/vendor/aos/aos.css" rel="stylesheet">
     
     <link rel="stylesheet" href="<?= defined('BASE_URL') ? BASE_URL : '/' ?>public/assets/css/style.css">
+    <link rel="stylesheet" href="<?= defined('BASE_URL') ? BASE_URL : '/' ?>public/assets/css/chatbot.css">
 </head>
 <body>
 
@@ -271,33 +272,10 @@ $gioDongDisplay = $gioDong ? substr($gioDong, 0, 5) : '';
                                 <select id="bookingTime" name="gioHen"
                                         class="form-select form-select-lg border-primary border-opacity-50"
                                         required>
-                                    <option value="">-- Chọn giờ --</option>
-                                    <?php
-                                    // Lấy giờ hoạt động từ ThongTinPhongKham, slot cuối trước giờ đóng cửa 1 tiếng
-                                    $openH = 8; $openM = 0; $closeH = 17; $closeM = 0;
-                                    if (!empty($phongKham['gioMoCua'])) {
-                                        $parts = explode(':', $phongKham['gioMoCua']);
-                                        $openH = (int)$parts[0]; $openM = (int)($parts[1] ?? 0);
-                                    }
-                                    if (!empty($phongKham['gioDongCua'])) {
-                                        $parts = explode(':', $phongKham['gioDongCua']);
-                                        $closeH = (int)$parts[0]; $closeM = (int)($parts[1] ?? 0);
-                                    }
-                                    // Slot cuối = giờ đóng cửa - 1 tiếng
-                                    $lastSlotMin = ($closeH * 60 + $closeM) - 60;
-                                    $startMin = $openH * 60 + $openM;
-                                    for ($m = $startMin; $m <= $lastSlotMin; $m += 30) {
-                                        // Bỏ qua giờ nghỉ trưa 12:00 - 12:59
-                                        if ($m >= 720 && $m < 780) continue;
-                                        $h = intdiv($m, 60);
-                                        $mi = $m % 60;
-                                        $val = sprintf('%02d:%02d', $h, $mi);
-                                        $label = $val . ($h < 12 ? ' sáng' : ' chiều');
-                                        echo "<option value=\"{$val}\">{$label}</option>\n";
-                                    }
-                                    ?>
+                                    <option value="">-- Chọn bác sĩ để xem giờ trống --</option>
                                 </select>
                                 <div class="invalid-feedback">Vui lòng chọn giờ hẹn.</div>
+                                <div id="bookingTimeHelp" class="form-text text-muted small">Khung giờ sẽ được lọc theo ca làm và các lịch đã đặt của bác sĩ.</div>
                             </div>
                             <!-- Chọn bác sĩ -->
                             <div class="col-12" id="doctorListContainer" style="display:none;">
@@ -413,5 +391,22 @@ $gioDongDisplay = $gioDong ? substr($gioDong, 0, 5) : '';
     <?php endif; ?>
     <script src="<?= defined('BASE_URL') ? BASE_URL : '/' ?>public/assets/js/csrf.js"></script>
     <script src="<?= defined('BASE_URL') ? BASE_URL : '/' ?>public/assets/js/script.js"></script>
+
+    <?php
+        $_dbotUser   = isset($currentUser) ? $currentUser : null;
+        $_dbotLogged = (!empty($isLoggedIn) && $_dbotUser) ? '1' : '0';
+        $_dbotRole   = $_dbotUser ? (string)(int)($_dbotUser['MaVaiTro'] ?? 0) : '0';
+        $_dbotUid    = $_dbotUser ? (string)(int)($_dbotUser['MaNguoiDung'] ?? 0) : '0';
+        $_dbotName   = $_dbotUser ? (string)($_dbotUser['HoTen'] ?? '') : '';
+        $_dbotBase   = defined('BASE_URL') ? BASE_URL : '/';
+    ?>
+    <div id="dermasoft-chatbot"
+         data-logged-in="<?= htmlspecialchars($_dbotLogged, ENT_QUOTES, 'UTF-8') ?>"
+         data-role="<?= htmlspecialchars($_dbotRole, ENT_QUOTES, 'UTF-8') ?>"
+         data-user-id="<?= htmlspecialchars($_dbotUid, ENT_QUOTES, 'UTF-8') ?>"
+         data-name="<?= htmlspecialchars($_dbotName, ENT_QUOTES, 'UTF-8') ?>"
+         data-base-url="<?= htmlspecialchars($_dbotBase, ENT_QUOTES, 'UTF-8') ?>"
+         data-login-url="<?= htmlspecialchars($_dbotBase . 'index.php?route=login', ENT_QUOTES, 'UTF-8') ?>"></div>
+    <script src="<?= defined('BASE_URL') ? BASE_URL : '/' ?>public/assets/js/chatbot.js" defer></script>
 </body>
 </html>

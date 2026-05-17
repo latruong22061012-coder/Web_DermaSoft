@@ -574,6 +574,451 @@ HTML;
     
     /**
      * ============================================================
+     * HÀM GỬI EMAIL XÁC NHẬN ĐẶT LỊCH (gửi ngay sau khi đặt)
+     * ============================================================
+     *
+     * @param array $data:
+     *               - 'to': Email người nhận
+     *               - 'hoTen': Tên bệnh nhân
+     *               - 'maLichHen': Mã lịch hẹn
+     *               - 'thoiGianHen': Chuỗi 'd/m/Y H:i'
+     *               - 'tenBacSi': (optional) Tên bác sĩ
+     *               - 'ghiChu': (optional) Ghi chú
+     * @return array
+     */
+    public function sendBookingConfirmation($data)
+    {
+        try {
+            if (empty($data['to'])) {
+                return $this->errorResponse('Email người nhận không được để trống');
+            }
+
+            $this->mail->clearAddresses();
+            $this->mail->clearReplyTos();
+            $this->mail->addAddress($data['to'], $data['hoTen'] ?? 'Khách hàng');
+            $this->mail->addReplyTo($this->config['clinic']['email'], $this->config['clinic']['name']);
+
+            $this->mail->Subject = 'Xác nhận đặt lịch hẹn - DERMASOFT';
+            $this->mail->isHTML(true);
+            $this->mail->Body = $this->getBookingConfirmationTemplate($data);
+            $this->mail->AltBody =
+                "Xin chào " . ($data['hoTen'] ?? 'Khách hàng') . ",\n\n"
+                . "Bạn đã đặt lịch thành công.\n"
+                . "Mã lịch hẹn: #" . ($data['maLichHen'] ?? '') . "\n"
+                . "Thời gian: " . ($data['thoiGianHen'] ?? '') . "\n"
+                . (!empty($data['tenBacSi']) ? "Bác sĩ: " . $data['tenBacSi'] . "\n" : '')
+                . "Phòng khám sẽ liên hệ xác nhận trong 30 phút.";
+
+            if (!$this->mail->send()) {
+                return $this->errorResponse('Lỗi gửi email: ' . $this->mail->ErrorInfo);
+            }
+
+            $this->addLog([
+                'type'      => 'BOOKING_CONFIRMATION',
+                'to'        => $data['to'],
+                'status'    => 'SUCCESS',
+                'timestamp' => date('Y-m-d H:i:s'),
+                'maLichHen' => $data['maLichHen'] ?? null,
+            ]);
+
+            return [
+                'success'   => true,
+                'message'   => 'Email xác nhận đặt lịch gửi thành công',
+                'timestamp' => date('Y-m-d H:i:s'),
+            ];
+        } catch (Exception $e) {
+            return $this->errorResponse('Exception: ' . $e->getMessage());
+        }
+    }
+
+    /**
+     * ============================================================
+     * HÀM GỬI EMAIL NHẮC LỊCH (trước 1 tiếng)
+     * ============================================================
+     *
+     * @param array $data:
+     *               - 'to', 'hoTen', 'maLichHen', 'thoiGianHen'
+     *               - 'tenBacSi' (optional)
+     *               - 'phutConLai' (int, mặc định 60)
+     * @return array
+     */
+    public function sendBookingReminder($data)
+    {
+        try {
+            if (empty($data['to'])) {
+                return $this->errorResponse('Email người nhận không được để trống');
+            }
+
+            $this->mail->clearAddresses();
+            $this->mail->clearReplyTos();
+            $this->mail->addAddress($data['to'], $data['hoTen'] ?? 'Khách hàng');
+            $this->mail->addReplyTo($this->config['clinic']['email'], $this->config['clinic']['name']);
+
+            $this->mail->Subject = 'Nhắc lịch hẹn sắp tới - DERMASOFT';
+            $this->mail->isHTML(true);
+            $this->mail->Body = $this->getBookingReminderTemplate($data);
+            $this->mail->AltBody =
+                "Xin chào " . ($data['hoTen'] ?? 'Khách hàng') . ",\n\n"
+                . "Bạn có lịch hẹn vào " . ($data['thoiGianHen'] ?? '') . " (còn khoảng "
+                . ($data['phutConLai'] ?? 60) . " phút).\n"
+                . (!empty($data['tenBacSi']) ? "Bác sĩ: " . $data['tenBacSi'] . "\n" : '')
+                . "Mã lịch hẹn: #" . ($data['maLichHen'] ?? '') . "\n\n"
+                . "Vui lòng đến đúng giờ. Cảm ơn bạn!";
+
+            if (!$this->mail->send()) {
+                return $this->errorResponse('Lỗi gửi email: ' . $this->mail->ErrorInfo);
+            }
+
+            $this->addLog([
+                'type'      => 'BOOKING_REMINDER',
+                'to'        => $data['to'],
+                'status'    => 'SUCCESS',
+                'timestamp' => date('Y-m-d H:i:s'),
+                'maLichHen' => $data['maLichHen'] ?? null,
+            ]);
+
+            return [
+                'success'   => true,
+                'message'   => 'Email nhắc lịch hẹn gửi thành công',
+                'timestamp' => date('Y-m-d H:i:s'),
+            ];
+        } catch (Exception $e) {
+            return $this->errorResponse('Exception: ' . $e->getMessage());
+        }
+    }
+
+    /**
+     * Template HTML: Xác nhận đặt lịch
+     */
+    private function getBookingConfirmationTemplate($data)
+    {
+        $hoTen       = htmlspecialchars($data['hoTen'] ?? 'Khách hàng');
+        $maLichHen   = htmlspecialchars((string)($data['maLichHen'] ?? ''));
+        $thoiGianHen = htmlspecialchars($data['thoiGianHen'] ?? '');
+        $tenBacSi    = !empty($data['tenBacSi']) ? htmlspecialchars($data['tenBacSi']) : '';
+        $ghiChu      = !empty($data['ghiChu']) ? htmlspecialchars($data['ghiChu']) : '';
+
+        // Ưu tiên thông tin phòng khám từ DB (truyền qua $data['clinic']), fallback về config
+        $clinic = is_array($data['clinic'] ?? null) ? $data['clinic'] : [];
+        $clinicName  = htmlspecialchars($clinic['name']    ?? $this->config['clinic']['name']    ?? 'DERMASOFT');
+        $clinicAddr  = htmlspecialchars($clinic['address'] ?? $this->config['clinic']['address'] ?? '');
+        $clinicPhone = htmlspecialchars($clinic['phone']   ?? $this->config['clinic']['phone']   ?? '');
+
+        $bacSiRow = $tenBacSi !== ''
+            ? "<tr><td style='padding:8px 0;color:#666;'>Bác sĩ:</td><td style='padding:8px 0;font-weight:bold;'>$tenBacSi</td></tr>"
+            : '';
+        $ghiChuRow = $ghiChu !== ''
+            ? "<tr><td style='padding:8px 0;color:#666;vertical-align:top;'>Ghi chú:</td><td style='padding:8px 0;'>$ghiChu</td></tr>"
+            : '';
+        $clinicAddrRow = $clinicAddr !== ''
+            ? "<p style='margin:4px 0;color:#555;'><strong>Địa chỉ:</strong> $clinicAddr</p>"
+            : '';
+        $clinicPhoneRow = $clinicPhone !== ''
+            ? "<p style='margin:4px 0;color:#555;'><strong>Hotline:</strong> $clinicPhone</p>"
+            : '';
+
+        return <<<HTML
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+    <meta charset="UTF-8">
+    <title>Xác nhận đặt lịch hẹn</title>
+</head>
+<body style="font-family:Arial,sans-serif;background:#f4f4f4;margin:0;padding:20px;">
+    <div style="max-width:600px;margin:0 auto;background:#fff;border-radius:8px;padding:30px;box-shadow:0 2px 10px rgba(0,0,0,0.1);">
+        <div style="text-align:center;border-bottom:3px solid #198754;padding-bottom:20px;margin-bottom:20px;">
+            <h1 style="color:#333;margin:0;">&#10004; Đặt Lịch Thành Công</h1>
+            <div style="color:#198754;font-size:14px;margin-top:5px;">$clinicName</div>
+        </div>
+        <p>Xin chào <strong>$hoTen</strong>,</p>
+        <p>Lịch hẹn của bạn đã được tiếp nhận. Phòng khám sẽ liên hệ xác nhận trong vòng <strong>30 phút</strong>.</p>
+        <div style="background:#e7f5ec;border-left:4px solid #198754;padding:16px;border-radius:4px;margin:20px 0;">
+            <table style="width:100%;border-collapse:collapse;">
+                <tr><td style="padding:8px 0;color:#666;width:35%;">Mã lịch hẹn:</td><td style="padding:8px 0;font-weight:bold;color:#198754;">#$maLichHen</td></tr>
+                <tr><td style="padding:8px 0;color:#666;">Thời gian:</td><td style="padding:8px 0;font-weight:bold;font-size:16px;">$thoiGianHen</td></tr>
+                $bacSiRow
+                $ghiChuRow
+            </table>
+        </div>
+        <div style="background:#fff3cd;border-left:4px solid #ffc107;padding:10px;color:#856404;margin:15px 0;">
+            <strong>&#9888; Lưu ý:</strong> Hệ thống sẽ gửi email nhắc bạn <strong>trước 1 tiếng</strong> giờ hẹn. Vui lòng đến đúng giờ.
+        </div>
+        <div style="margin-top:20px;padding-top:15px;border-top:1px solid #ddd;">
+            $clinicAddrRow
+            $clinicPhoneRow
+        </div>
+        <div style="text-align:center;color:#999;font-size:12px;border-top:1px solid #ddd;padding-top:20px;margin-top:20px;">
+            <p>&#169; 2026 $clinicName. All rights reserved.</p>
+            <p>Email này được gửi tự động. Vui lòng không trả lời trực tiếp.</p>
+        </div>
+    </div>
+</body>
+</html>
+HTML;
+    }
+
+    /**
+     * Template HTML: Nhắc lịch trước 1 tiếng
+     */
+    private function getBookingReminderTemplate($data)
+    {
+        $hoTen       = htmlspecialchars($data['hoTen'] ?? 'Khách hàng');
+        $maLichHen   = htmlspecialchars((string)($data['maLichHen'] ?? ''));
+        $thoiGianHen = htmlspecialchars($data['thoiGianHen'] ?? '');
+        $tenBacSi    = !empty($data['tenBacSi']) ? htmlspecialchars($data['tenBacSi']) : '';
+        $phutConLai  = (int)($data['phutConLai'] ?? 60);
+
+        // Ưu tiên thông tin phòng khám từ DB (truyền qua $data['clinic']), fallback về config
+        $clinic = is_array($data['clinic'] ?? null) ? $data['clinic'] : [];
+        $clinicName  = htmlspecialchars($clinic['name']    ?? $this->config['clinic']['name']    ?? 'DERMASOFT');
+        $clinicAddr  = htmlspecialchars($clinic['address'] ?? $this->config['clinic']['address'] ?? '');
+        $clinicPhone = htmlspecialchars($clinic['phone']   ?? $this->config['clinic']['phone']   ?? '');
+
+        $bacSiRow = $tenBacSi !== ''
+            ? "<tr><td style='padding:8px 0;color:#666;'>Bác sĩ:</td><td style='padding:8px 0;font-weight:bold;'>$tenBacSi</td></tr>"
+            : '';
+        $clinicAddrRow = $clinicAddr !== ''
+            ? "<p style='margin:4px 0;color:#555;'><strong>Địa chỉ:</strong> $clinicAddr</p>"
+            : '';
+        $clinicPhoneRow = $clinicPhone !== ''
+            ? "<p style='margin:4px 0;color:#555;'><strong>Hotline:</strong> $clinicPhone</p>"
+            : '';
+
+        return <<<HTML
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+    <meta charset="UTF-8">
+    <title>Nhắc lịch hẹn</title>
+</head>
+<body style="font-family:Arial,sans-serif;background:#f4f4f4;margin:0;padding:20px;">
+    <div style="max-width:600px;margin:0 auto;background:#fff;border-radius:8px;padding:30px;box-shadow:0 2px 10px rgba(0,0,0,0.1);">
+        <div style="text-align:center;border-bottom:3px solid #fd7e14;padding-bottom:20px;margin-bottom:20px;">
+            <h1 style="color:#333;margin:0;">&#9200; Nhắc Lịch Hẹn</h1>
+            <div style="color:#fd7e14;font-size:14px;margin-top:5px;">$clinicName</div>
+        </div>
+        <p>Xin chào <strong>$hoTen</strong>,</p>
+        <p>Đây là email nhắc bạn về lịch hẹn sắp diễn ra trong <strong>khoảng $phutConLai phút nữa</strong>.</p>
+        <div style="background:#fff4ec;border-left:4px solid #fd7e14;padding:16px;border-radius:4px;margin:20px 0;">
+            <table style="width:100%;border-collapse:collapse;">
+                <tr><td style="padding:8px 0;color:#666;width:35%;">Mã lịch hẹn:</td><td style="padding:8px 0;font-weight:bold;color:#fd7e14;">#$maLichHen</td></tr>
+                <tr><td style="padding:8px 0;color:#666;">Thời gian:</td><td style="padding:8px 0;font-weight:bold;font-size:16px;">$thoiGianHen</td></tr>
+                $bacSiRow
+            </table>
+        </div>
+        <p>Vui lòng có mặt tại phòng khám đúng giờ. Nếu không thể đến, xin vui lòng liên hệ hủy lịch trước.</p>
+        <div style="margin-top:20px;padding-top:15px;border-top:1px solid #ddd;">
+            $clinicAddrRow
+            $clinicPhoneRow
+        </div>
+        <div style="text-align:center;color:#999;font-size:12px;border-top:1px solid #ddd;padding-top:20px;margin-top:20px;">
+            <p>&#169; 2026 $clinicName. All rights reserved.</p>
+            <p>Email này được gửi tự động. Vui lòng không trả lời trực tiếp.</p>
+        </div>
+    </div>
+</body>
+</html>
+HTML;
+    }
+
+    /**
+     * ============================================================
+     * HÀM GỬI EMAIL PHÂN CÔNG CA LÀM VIỆC (cho bác sĩ & lễ tân)
+     * ============================================================
+     *
+     * @param array $data:
+     *               - 'to'          : Email nhân viên
+     *               - 'hoTen'       : Tên nhân viên
+     *               - 'vaiTro'      : 'Bác sĩ' | 'Lễ tân' | ...
+     *               - 'tenCa'       : Tên ca (ví dụ "Ca sáng")
+     *               - 'gioBatDau'   : 'HH:MM'
+     *               - 'gioKetThuc'  : 'HH:MM'
+     *               - 'ngayLamViec' : 'd/m/Y'
+     *               - 'thuTrongTuan': (optional) ví dụ 'Thứ Hai'
+     *               - 'loai'        : 'MOI' | 'SUA' | 'XOA' (mặc định 'MOI')
+     *               - 'caCu'        : (optional, khi 'SUA') ['tenCa','gioBatDau','gioKetThuc','ngayLamViec']
+     *               - 'clinic'      : (optional) override thông tin phòng khám
+     * @return array
+     */
+    public function sendShiftAssignment($data)
+    {
+        try {
+            if (empty($data['to'])) {
+                return $this->errorResponse('Email người nhận không được để trống');
+            }
+
+            $loai = strtoupper((string)($data['loai'] ?? 'MOI'));
+            $loai = in_array($loai, ['MOI', 'SUA', 'XOA'], true) ? $loai : 'MOI';
+
+            switch ($loai) {
+                case 'SUA':
+                    $subject = 'Cập nhật ca làm việc - DERMASOFT';
+                    $logType = 'SHIFT_UPDATE';
+                    $altIntro = 'Ca làm việc của bạn đã được cập nhật.';
+                    break;
+                case 'XOA':
+                    $subject = 'Hủy ca làm việc - DERMASOFT';
+                    $logType = 'SHIFT_CANCEL';
+                    $altIntro = 'Ca làm việc của bạn đã bị hủy.';
+                    break;
+                default:
+                    $subject = 'Phân công ca làm việc mới - DERMASOFT';
+                    $logType = 'SHIFT_ASSIGN';
+                    $altIntro = 'Bạn vừa được phân công một ca làm việc mới.';
+            }
+
+            $this->mail->clearAddresses();
+            $this->mail->clearReplyTos();
+            $this->mail->addAddress($data['to'], $data['hoTen'] ?? 'Nhân viên');
+            $this->mail->addReplyTo($this->config['clinic']['email'], $this->config['clinic']['name']);
+
+            $this->mail->Subject = $subject;
+            $this->mail->isHTML(true);
+            $this->mail->Body = $this->getShiftAssignmentTemplate($data, $loai);
+            $this->mail->AltBody =
+                "Xin chào " . ($data['hoTen'] ?? 'Nhân viên') . ",\n\n"
+                . $altIntro . "\n"
+                . "Ngày: " . ($data['ngayLamViec'] ?? '') . "\n"
+                . "Ca: " . ($data['tenCa'] ?? '') . " (" . ($data['gioBatDau'] ?? '') . " - " . ($data['gioKetThuc'] ?? '') . ")\n"
+                . "Vui lòng đăng nhập hệ thống để xem chi tiết.";
+
+            if (!$this->mail->send()) {
+                return $this->errorResponse('Lỗi gửi email: ' . $this->mail->ErrorInfo);
+            }
+
+            $this->addLog([
+                'type'        => $logType,
+                'to'          => $data['to'],
+                'status'      => 'SUCCESS',
+                'timestamp'   => date('Y-m-d H:i:s'),
+                'ngayLamViec' => $data['ngayLamViec'] ?? null,
+                'tenCa'       => $data['tenCa'] ?? null,
+            ]);
+
+            return [
+                'success'   => true,
+                'message'   => 'Email phân công ca gửi thành công',
+                'timestamp' => date('Y-m-d H:i:s'),
+            ];
+        } catch (Exception $e) {
+            return $this->errorResponse('Exception: ' . $e->getMessage());
+        }
+    }
+
+    /**
+     * Template HTML: Phân công / cập nhật / hủy ca làm việc
+     */
+    private function getShiftAssignmentTemplate($data, $loai = 'MOI')
+    {
+        $hoTen        = htmlspecialchars($data['hoTen']        ?? 'Nhân viên');
+        $vaiTro       = htmlspecialchars($data['vaiTro']       ?? 'Nhân viên');
+        $tenCa        = htmlspecialchars($data['tenCa']        ?? '');
+        $gioBatDau    = htmlspecialchars($data['gioBatDau']    ?? '');
+        $gioKetThuc   = htmlspecialchars($data['gioKetThuc']   ?? '');
+        $ngayLamViec  = htmlspecialchars($data['ngayLamViec']  ?? '');
+        $thuTrongTuan = htmlspecialchars($data['thuTrongTuan'] ?? '');
+
+        // Tone màu + nhãn theo loại
+        switch ($loai) {
+            case 'SUA':
+                $color   = '#0d6efd';
+                $title   = '&#9998; Cập Nhật Ca Làm Việc';
+                $intro   = 'Ca làm việc của bạn đã được <strong>cập nhật</strong>. Vui lòng kiểm tra thông tin mới phía dưới.';
+                $bgSoft  = '#e7f1ff';
+                break;
+            case 'XOA':
+                $color   = '#dc3545';
+                $title   = '&#10006; Hủy Ca Làm Việc';
+                $intro   = 'Ca làm việc dưới đây đã được <strong>hủy</strong>. Bạn không cần đến làm vào thời gian này.';
+                $bgSoft  = '#fdecec';
+                break;
+            default:
+                $color   = '#198754';
+                $title   = '&#10004; Phân Công Ca Mới';
+                $intro   = 'Bạn vừa được phân công một <strong>ca làm việc mới</strong>. Vui lòng có mặt đúng giờ.';
+                $bgSoft  = '#e7f5ec';
+        }
+
+        // Thông tin phòng khám
+        $clinic = is_array($data['clinic'] ?? null) ? $data['clinic'] : [];
+        $clinicName  = htmlspecialchars($clinic['name']    ?? $this->config['clinic']['name']    ?? 'DERMASOFT');
+        $clinicAddr  = htmlspecialchars($clinic['address'] ?? $this->config['clinic']['address'] ?? '');
+        $clinicPhone = htmlspecialchars($clinic['phone']   ?? $this->config['clinic']['phone']   ?? '');
+
+        $ngayLabel = $thuTrongTuan !== '' ? "$thuTrongTuan, $ngayLamViec" : $ngayLamViec;
+        $gioRange  = ($gioBatDau !== '' || $gioKetThuc !== '')
+            ? "$gioBatDau - $gioKetThuc"
+            : '';
+
+        // Khối hiển thị ca cũ (chỉ khi SUA và có dữ liệu)
+        $caCuBlock = '';
+        if ($loai === 'SUA' && !empty($data['caCu']) && is_array($data['caCu'])) {
+            $cuTen   = htmlspecialchars($data['caCu']['tenCa']        ?? '');
+            $cuBD    = htmlspecialchars($data['caCu']['gioBatDau']    ?? '');
+            $cuKT    = htmlspecialchars($data['caCu']['gioKetThuc']   ?? '');
+            $cuNgay  = htmlspecialchars($data['caCu']['ngayLamViec']  ?? '');
+            $cuGio   = ($cuBD !== '' || $cuKT !== '') ? "$cuBD - $cuKT" : '';
+            $caCuBlock = <<<HTML
+        <div style="background:#f1f3f5;border-left:4px solid #adb5bd;padding:12px 16px;border-radius:4px;margin:10px 0;">
+            <div style="color:#666;font-size:13px;margin-bottom:6px;"><strong>Thông tin ca cũ:</strong></div>
+            <table style="width:100%;border-collapse:collapse;font-size:14px;">
+                <tr><td style="padding:4px 0;color:#666;width:35%;">Ngày:</td><td style="padding:4px 0;">$cuNgay</td></tr>
+                <tr><td style="padding:4px 0;color:#666;">Ca:</td><td style="padding:4px 0;">$cuTen</td></tr>
+                <tr><td style="padding:4px 0;color:#666;">Giờ:</td><td style="padding:4px 0;">$cuGio</td></tr>
+            </table>
+        </div>
+HTML;
+        }
+
+        $clinicAddrRow = $clinicAddr !== ''
+            ? "<p style='margin:4px 0;color:#555;'><strong>Địa chỉ:</strong> $clinicAddr</p>"
+            : '';
+        $clinicPhoneRow = $clinicPhone !== ''
+            ? "<p style='margin:4px 0;color:#555;'><strong>Hotline:</strong> $clinicPhone</p>"
+            : '';
+
+        return <<<HTML
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+    <meta charset="UTF-8">
+    <title>Phân công ca làm việc</title>
+</head>
+<body style="font-family:Arial,sans-serif;background:#f4f4f4;margin:0;padding:20px;">
+    <div style="max-width:600px;margin:0 auto;background:#fff;border-radius:8px;padding:30px;box-shadow:0 2px 10px rgba(0,0,0,0.1);">
+        <div style="text-align:center;border-bottom:3px solid $color;padding-bottom:20px;margin-bottom:20px;">
+            <h1 style="color:#333;margin:0;font-size:22px;">$title</h1>
+            <div style="color:$color;font-size:14px;margin-top:5px;">$clinicName</div>
+        </div>
+        <p>Xin chào <strong>$hoTen</strong> ($vaiTro),</p>
+        <p>$intro</p>
+        $caCuBlock
+        <div style="background:$bgSoft;border-left:4px solid $color;padding:16px;border-radius:4px;margin:20px 0;">
+            <table style="width:100%;border-collapse:collapse;">
+                <tr><td style="padding:8px 0;color:#666;width:35%;">Ngày làm việc:</td><td style="padding:8px 0;font-weight:bold;font-size:16px;">$ngayLabel</td></tr>
+                <tr><td style="padding:8px 0;color:#666;">Ca:</td><td style="padding:8px 0;font-weight:bold;color:$color;">$tenCa</td></tr>
+                <tr><td style="padding:8px 0;color:#666;">Khung giờ:</td><td style="padding:8px 0;font-weight:bold;">$gioRange</td></tr>
+            </table>
+        </div>
+        <div style="background:#fff3cd;border-left:4px solid #ffc107;padding:10px;color:#856404;margin:15px 0;font-size:14px;">
+            <strong>&#9888; Lưu ý:</strong> Vui lòng đăng nhập hệ thống để xem lịch làm việc đầy đủ. Nếu có thắc mắc, liên hệ quản lý phòng khám.
+        </div>
+        <div style="margin-top:20px;padding-top:15px;border-top:1px solid #ddd;">
+            $clinicAddrRow
+            $clinicPhoneRow
+        </div>
+        <div style="text-align:center;color:#999;font-size:12px;border-top:1px solid #ddd;padding-top:20px;margin-top:20px;">
+            <p>&#169; 2026 $clinicName. All rights reserved.</p>
+            <p>Email này được gửi tự động. Vui lòng không trả lời trực tiếp.</p>
+        </div>
+    </div>
+</body>
+</html>
+HTML;
+    }
+
+    /**
+     * ============================================================
      * HỖ TRỢ: Lỗi & Logging
      * ============================================================
      */

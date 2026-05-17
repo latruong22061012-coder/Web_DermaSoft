@@ -5,6 +5,7 @@ namespace App\Controllers\Api;
 use App\Controllers\ApiController;
 use App\Core\Auth;
 use App\Core\Database;
+use App\Models\LichHen;
 
 class BacSiApiController extends ApiController
 {
@@ -40,6 +41,7 @@ class BacSiApiController extends ApiController
     public function stats(): void
     {
         $maNguoiDung = $this->requireBacSi();
+        LichHen::autoExpireOverdue();
 
         // BN đang chờ khám hôm nay (PhieuKham TrangThai=0 + LichHen hôm nay)
         $choKham = Database::fetchOne(

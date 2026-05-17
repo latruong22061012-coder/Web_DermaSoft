@@ -8,7 +8,6 @@ namespace App\Controllers;
 
 use App\Core\Auth;
 use App\Core\Database;
-use App\Core\Config;
 
 abstract class ApiController
 {

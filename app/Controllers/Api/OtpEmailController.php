@@ -24,6 +24,8 @@ use App\Services\EmailService;
 
 class OtpEmailController extends ApiController
 {
+    private const OTP_LOGIN_MAX_ATTEMPTS = 5;
+
     /** @var \EmailService */
     private $emailService;
 
@@ -113,6 +115,25 @@ class OtpEmailController extends ApiController
 
         return $this->emailService;
     }
+
+    private function extractRemainingAttemptsFromMessage(string $message): ?int
+    {
+        if (preg_match('/C[oò]n\s+(\d+)\s+l[aà]n/i', $message, $matches)) {
+            return (int)$matches[1];
+        }
+
+        return null;
+    }
+
+    private function isOtpInvalidMessage(string $message): bool
+    {
+        return stripos($message, 'không đúng') !== false
+            || stripos($message, 'khong dung') !== false
+            || stripos($message, 'OTP không hợp lệ') !== false
+            || stripos($message, 'OTP khong hop le') !== false
+            || stripos($message, 'Còn') !== false
+            || stripos($message, 'Con') !== false;
+    }
     
     // ============================================================
     // ENDPOINT 1: POST /api/auth/check-phone
@@ -187,8 +208,22 @@ class OtpEmailController extends ApiController
     {
         Auth::startSession();
 
-        // Rate limit: tối đa 5 lần gửi OTP trong 5 phút
-        $this->checkRateLimit('otp_login', 5, 300);
+        // Rate limit: tối đa 5 lần gửi OTP / 60 giây, lần thứ 6 báo thử lại sau 60s
+        $ip = $_SERVER['REMOTE_ADDR'] ?? '0.0.0.0';
+        $rateKey = 'otp_login_send_' . md5($ip);
+        $now = time();
+        $windowSeconds = 60;
+        $maxAttempts = 5;
+
+        if (!isset($_SESSION[$rateKey]) || ($now - (int)$_SESSION[$rateKey]['start']) >= $windowSeconds) {
+            $_SESSION[$rateKey] = ['count' => 1, 'start' => $now];
+        } else {
+            $_SESSION[$rateKey]['count'] = (int)($_SESSION[$rateKey]['count'] ?? 0) + 1;
+            if ((int)$_SESSION[$rateKey]['count'] > $maxAttempts) {
+                $this->error('Bạn đã yêu cầu OTP quá nhiều lần. Vui lòng thử lại sau 60s', null, 429);
+                return;
+            }
+        }
 
         $data = $this->getJSON();
 
@@ -201,8 +236,22 @@ class OtpEmailController extends ApiController
             return;
         }
 
+        $phone = trim($data['sodienthoai']);
+
+        // Cooldown theo số điện thoại để chặn spam gửi liên tục cho cùng 1 user.
+        $phoneCooldownKey = 'otp_login_phone_last_send_' . md5($phone);
+        $lastSendAt = (int)($_SESSION[$phoneCooldownKey] ?? 0);
+        if ($lastSendAt > 0) {
+            $elapsed = $now - $lastSendAt;
+            if ($elapsed < 60) {
+                $remaining = 60 - $elapsed;
+                $this->error("Bạn vừa yêu cầu OTP. Vui lòng thử lại sau {$remaining}s", null, 429);
+                return;
+            }
+        }
+
         try {
-            $user = User::findByPhone($data['sodienthoai']);
+            $user = User::findByPhone($phone);
 
             if (!$user) {
                 $this->success(['exists' => false], 'Kiểm tra số điện thoại của bạn');
@@ -219,14 +268,6 @@ class OtpEmailController extends ApiController
                 $this->error('Tài khoản chưa có email. Vui lòng liên hệ quản trị viên', null, 400);
                 return;
             }
-
-            $phone = $data['sodienthoai'];
-
-            // Xoá OTP cũ chưa dùng của số này (tránh lỗi rate limit)
-            \App\Core\Database::execute(
-                "DELETE FROM XacThucOTP WHERE SoDienThoai = ?",
-                [$phone]
-            );
 
             // Gọi SP_GuiOTP_NguoiDung — SP tự tạo + lưu OTP, trả về MaOTP
             $spResult = \App\Core\Database::fetchOne(
@@ -268,6 +309,8 @@ class OtpEmailController extends ApiController
                 'user_id'    => $user['MaNguoiDung'],
                 'email'      => $userEmail,
                 'expires_at' => time() + 300,
+                'attempts'   => 0,
+                'max_attempts' => self::OTP_LOGIN_MAX_ATTEMPTS,
             ];
 
             // Xây dựng response
@@ -283,6 +326,9 @@ class OtpEmailController extends ApiController
                 $msg = 'Mã OTP đã tạo (dev mode — chưa có email server)';
             }
 
+            // Chỉ set cooldown khi OTP đã được tạo thành công.
+            $_SESSION[$phoneCooldownKey] = time();
+
             $this->success($responseData, $msg);
 
         } catch (\Throwable $e) {
@@ -292,7 +338,7 @@ class OtpEmailController extends ApiController
                 http_response_code(429);
                 echo json_encode([
                     'status'  => 429,
-                    'message' => 'Bạn đã yêu cầu OTP quá nhiều lần. Vui lòng thử lại sau 1 phút.',
+                    'message' => 'Bạn đã yêu cầu OTP quá nhiều lần. Vui lòng thử lại sau 60s',
                     'data'    => null,
                 ], JSON_UNESCAPED_UNICODE);
                 exit;
@@ -350,6 +396,19 @@ class OtpEmailController extends ApiController
                 return;
             }
 
+            $maxAttempts = (int)($otpSession['max_attempts'] ?? self::OTP_LOGIN_MAX_ATTEMPTS);
+            $currentAttempts = (int)($otpSession['attempts'] ?? 0);
+            if ($currentAttempts >= $maxAttempts) {
+                unset($_SESSION[$sessionKey]);
+                $this->error('Quá nhiều lần thử sai. Vui lòng yêu cầu mã OTP mới', [
+                    'invalidOtp' => true,
+                    'remainingAttempts' => 0,
+                    'maxAttempts' => $maxAttempts,
+                    'needResendOtp' => true,
+                ], 429);
+                return;
+            }
+
             // Xác thực OTP qua SP — gọi thẳng bằng SĐT (không qua email lookup)
             try {
                 $spResult = \App\Core\Database::fetchOne(
@@ -358,8 +417,33 @@ class OtpEmailController extends ApiController
                 );
             } catch (\Throwable $spEx) {
                 $msg = $spEx->getMessage();
-                if (strpos($msg, 'không đúng') !== false || strpos($msg, 'Còn') !== false) {
-                    $this->error($msg, null, 401);
+                if ($this->isOtpInvalidMessage($msg)) {
+                    $newAttempts = (int)($_SESSION[$sessionKey]['attempts'] ?? 0) + 1;
+                    $_SESSION[$sessionKey]['attempts'] = $newAttempts;
+
+                    $remainingBySession = max(0, $maxAttempts - $newAttempts);
+                    $remainingFromSp = $this->extractRemainingAttemptsFromMessage($msg);
+                    $remaining = $remainingFromSp !== null
+                        ? min($remainingBySession, $remainingFromSp)
+                        : $remainingBySession;
+
+                    if ($remaining <= 0) {
+                        unset($_SESSION[$sessionKey]);
+                        $this->error('Quá nhiều lần thử sai. Vui lòng yêu cầu mã OTP mới', [
+                            'invalidOtp' => true,
+                            'remainingAttempts' => 0,
+                            'maxAttempts' => $maxAttempts,
+                            'needResendOtp' => true,
+                        ], 429);
+                        return;
+                    }
+
+                    $this->error("OTP không hợp lệ. Bạn còn {$remaining} lần thử.", [
+                        'invalidOtp' => true,
+                        'remainingAttempts' => $remaining,
+                        'maxAttempts' => $maxAttempts,
+                        'needResendOtp' => false,
+                    ], 401);
                 } elseif (strpos($msg, 'hết hạn') !== false) {
                     unset($_SESSION[$sessionKey]);
                     $this->error('OTP đã hết hạn, vui lòng gửi lại mã', null, 401);
@@ -448,14 +532,16 @@ class OtpEmailController extends ApiController
                 }
                 // Nếu soft-deleted → kích hoạt lại tài khoản
                 $maVaiTro = $this->getOrCreateBenhNhanRole();
+                $username = (string)($existingByPhone['TenDangNhap'] ?? ('user_' . substr($data['sodienthoai'], -6)));
                 User::updateInfo((int)$existingByPhone['MaNguoiDung'], [
                     'HoTen'       => $data['hoTen'],
+                    'TenDangNhap' => $username,
                     'Email'       => $data['email'],
                     'MatKhau'     => password_hash($data['matkhau'], PASSWORD_DEFAULT),
                     'MaVaiTro'    => $maVaiTro ?: 4,
                     'TrangThaiTK' => 1,
                     'IsDeleted'   => 0,
-                    'DoiMatKhau'  => 1,
+                    'DoiMatKhau'  => 0,
                 ]);
                 $userId = (int)$existingByPhone['MaNguoiDung'];
             } else {
@@ -484,6 +570,7 @@ class OtpEmailController extends ApiController
                     'MatKhau'     => $data['matkhau'],
                     'MaVaiTro'    => $maVaiTro,
                     'TrangThaiTK' => 1,
+                    'DoiMatKhau'  => 0,
                 ]);
 
                 if (!$userId) {

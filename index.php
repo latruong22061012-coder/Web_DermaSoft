@@ -2,6 +2,9 @@
 
 declare(strict_types=1);
 
+// ═══ TIMEZONE - Đồng bộ giờ PHP với giờ Việt Nam (DB dùng giờ VN) ═══
+date_default_timezone_set('Asia/Ho_Chi_Minh');
+
 // ═══ ERROR HANDLING - Prevent HTML errors in API responses ═══
 ini_set('display_errors', '0');
 ini_set('log_errors', '1');
@@ -44,6 +47,9 @@ spl_autoload_register(function ($class) {
     }
 });
 
+// Load config sớm để định nghĩa các hằng (GEMINI_API_KEY, DB_*, ...) trước khi controller chạy
+require_once __DIR__ . '/app/Config/config.php';
+
 require_once __DIR__ . '/app/Core/Controller.php';
 require_once __DIR__ . '/app/Controllers/ApiController.php';
 require_once __DIR__ . '/app/Controllers/HomeController.php';
@@ -59,6 +65,7 @@ require_once __DIR__ . '/app/Controllers/BacSiController.php';
 require_once __DIR__ . '/app/Controllers/Api/BacSiApiController.php';
 require_once __DIR__ . '/app/Controllers/LeTanController.php';
 require_once __DIR__ . '/app/Controllers/Api/LeTanApiController.php';
+require_once __DIR__ . '/app/Controllers/Api/ChatbotController.php';
 
 // Khởi tạo session + CSRF token cho mọi request
 \App\Core\Auth::startSession();
@@ -102,6 +109,21 @@ if (strpos($request_uri, '/api/') === 0) {
 // Tuyến đường Web
 $route = $_GET['route'] ?? 'home';
 
+// Nếu tài khoản yêu cầu đổi thông tin lần đầu -> ép vào trang đổi tên đăng nhập/mật khẩu
+if (\App\Core\Auth::isAuthenticated() && \App\Core\Auth::needsPasswordChange()) {
+    $currentUser = \App\Core\Auth::getCurrentUser();
+    $roleId = (int)($currentUser['MaVaiTro'] ?? 0);
+
+    // Chỉ bắt buộc đổi thông tin lần đầu cho tài khoản nhân sự.
+    if (in_array($roleId, [1, 2, 3], true)) {
+        $allowedRoutes = ['change-credentials', 'logout'];
+        if (!in_array($route, $allowedRoutes, true) && strpos($route, 'api/') !== 0) {
+            header('Location: index.php?route=change-credentials');
+            exit;
+        }
+    }
+}
+
 // Fallback: xử lý API routes qua ?route=api/... (dùng khi không có .htaccess)
 if (strpos($route, 'api/') === 0) {
     ob_start();
@@ -134,6 +156,9 @@ switch ($route) {
         break;
     case 'forgot-password':
         (new AuthController())->forgotPassword();
+        break;
+    case 'change-credentials':
+        (new AuthController())->changeCredentials();
         break;
     case 'profile':
         (new ProfileController())->index();
@@ -244,6 +269,7 @@ function handleApiRoute($uri)
         'thanh-vien' => 'App\Controllers\Api\ThanhVienInfoController',
         'thanhvien' => 'App\Controllers\Api\ThanhVienInfoController',  // Alternative name
         'danhgia' => 'App\Controllers\Api\DanhGiaController',
+        'chatbot' => 'App\Controllers\Api\ChatbotController',
     ];
 
     if (!isset($routes[$resource])) {
@@ -282,6 +308,8 @@ function handleApiRoute($uri)
             $controller->verifyToken();
         } elseif ($method === 'change-password' && $http_method === 'POST') {
             $controller->changePassword();
+        } elseif ($method === 'first-login-update' && $http_method === 'POST') {
+            $controller->firstLoginUpdate();
         } 
         // ────── OTP/Email Endpoints (OtpEmailController) ──────
         elseif ($method === 'check-phone' && $http_method === 'POST') {
@@ -426,9 +454,23 @@ function handleApiRoute($uri)
             $controller->create();
         } elseif ($method === 'doctors' && $http_method === 'GET') {
             $controller->doctors();
+        } elseif ($method === 'slots' && $http_method === 'GET') {
+            $controller->slots();
         } else {
             http_response_code(404);
             echo json_encode(['status' => 404, 'message' => 'Booking endpoint không tìm thấy', 'data' => null]);
+        }
+        return;
+    }
+
+    if ($resource === 'chatbot') {
+        if ($method === 'send' && $http_method === 'POST') {
+            $controller->send();
+        } elseif ($method === 'config' && $http_method === 'GET') {
+            $controller->config();
+        } else {
+            http_response_code(404);
+            echo json_encode(['status' => 404, 'message' => 'Chatbot endpoint không tìm thấy', 'data' => null]);
         }
         return;
     }

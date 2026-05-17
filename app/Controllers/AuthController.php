@@ -43,4 +43,44 @@ class AuthController extends Controller
     {
         $this->render('forgot-password', ['phongKham' => $this->getPhongKhamData()]);
     }
+
+    public function changeCredentials(): void
+    {
+        \App\Core\Auth::startSession();
+
+        if (!\App\Core\Auth::isAuthenticated()) {
+            header('Location: index.php?route=login');
+            exit;
+        }
+
+        $currentUser = \App\Core\Auth::getCurrentUser();
+        $roleId = (int)($currentUser['MaVaiTro'] ?? 0);
+
+        // Chỉ nhân sự (Admin/Bác sĩ/Lễ tân) được dùng luồng này.
+        if (!in_array($roleId, [1, 2, 3], true)) {
+            header('Location: index.php?route=profile');
+            exit;
+        }
+
+        if (!\App\Core\Auth::needsPasswordChange()) {
+            if (\App\Core\Auth::hasRole(1)) {
+                header('Location: index.php?route=admin/dashboard');
+                exit;
+            } elseif (\App\Core\Auth::hasRole(2)) {
+                header('Location: index.php?route=bacsi/dashboard');
+                exit;
+            } elseif (\App\Core\Auth::hasRole(3)) {
+                header('Location: index.php?route=letan/dashboard');
+                exit;
+            }
+
+            header('Location: index.php?route=profile');
+            exit;
+        }
+
+        $this->render('change-credentials', [
+            'phongKham' => $this->getPhongKhamData(),
+            'currentUser' => $currentUser,
+        ]);
+    }
 }

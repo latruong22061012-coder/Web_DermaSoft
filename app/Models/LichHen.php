@@ -11,6 +11,7 @@
 namespace App\Models;
 
 use App\Core\Model;
+use App\Core\Database;
 
 class LichHen extends Model
 {
@@ -111,5 +112,25 @@ class LichHen extends Model
     public static function confirm(int $id): int
     {
         return self::updateStatus($id, 1);
+    }
+
+    /**
+     * Hủy toàn bộ lịch hẹn đang chờ xác nhận (TrangThai=0) đã quá giờ hẹn.
+     * Gọi trước mọi truy vấn đếm / hiển thị lịch hẹn để số liệu luôn chính xác.
+     * Chỉ huỷ TrangThai=0 (chưa xác nhận) — lịch đã xác nhận (TrangThai=1)
+     * sẽ do nhân viên xử lý thủ công (hoàn thành / hủy).
+     */
+    public static function autoExpireOverdue(): void
+    {
+        try {
+            Database::query(
+                "UPDATE LichHen SET TrangThai = 3
+                 WHERE TrangThai = 0
+                   AND ThoiGianHen < GETDATE()",
+                []
+            );
+        } catch (\Exception $e) {
+            error_log('LichHen::autoExpireOverdue lỗi: ' . $e->getMessage());
+        }
     }
 }

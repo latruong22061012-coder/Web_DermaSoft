@@ -31,6 +31,11 @@ if (!defined('DB_PASS')) define('DB_PASS', getenv('DB_PASS') ?: '');
 if (!defined('DB_DRIVER')) define('DB_DRIVER', getenv('DB_DRIVER') ?: 'sqlsrv');
 if (!defined('DB_USE_WINDOWS_AUTH')) define('DB_USE_WINDOWS_AUTH', (getenv('DB_USE_WINDOWS_AUTH') ?: 'false') === 'true');
 
+// Cấu hình Chatbot (Google Gemini) — đọc từ env, không hardcode key vào source
+if (!defined('GEMINI_API_KEY')) define('GEMINI_API_KEY', getenv('GEMINI_API_KEY') ?: '');
+if (!defined('GEMINI_MODEL')) define('GEMINI_MODEL', getenv('GEMINI_MODEL') ?: 'gemini-2.0-flash');
+if (!defined('CHATBOT_RATE_LIMIT_PER_HOUR')) define('CHATBOT_RATE_LIMIT_PER_HOUR', (int)(getenv('CHATBOT_RATE_LIMIT_PER_HOUR') ?: 20));
+
 // Xây dựng DSN cho SQL Server
 // Thêm TrustServerCertificate=yes để bypass SSL certificate validation
 // Encrypt=yes để sử dụng encryption (optional, nhưng giúp nếu server yêu cầu)

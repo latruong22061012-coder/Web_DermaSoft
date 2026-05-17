@@ -6,6 +6,7 @@ use App\Core\Auth;
 use App\Core\Database;
 use App\Models\User;
 use App\Models\ThongTinPhongKham;
+use App\Models\LichHen;
 
 class ProfileController extends Controller
 {
@@ -103,6 +104,7 @@ class ProfileController extends Controller
             }
 
             // Lịch hẹn sắp tới (TrangThai 0=chờ xác nhận, 1=đã xác nhận)
+            LichHen::autoExpireOverdue();
             $upcomingAppointments = Database::fetchAll(
                 "SELECT lh.*, nd.HoTen AS TenBacSi
                  FROM LichHen lh

@@ -187,6 +187,8 @@ $tenPK = htmlspecialchars($phongKham['tenPhongKham'] ?? 'DarmaSoft Clinic', ENT_
         var formStep2 = document.getElementById('formStep2');
         var formRegister = document.getElementById('formRegister');
         var otpDigits = document.querySelectorAll('.otp-digit');
+        var otpErrorEl = document.getElementById('otpError');
+        var defaultOtpErrorText = otpErrorEl ? otpErrorEl.textContent : 'Vui lòng nhập đầy đủ mã OTP.';
         var countdownTimer = null;
 
         function maskPhone(phone) {
@@ -432,7 +434,10 @@ $tenPK = htmlspecialchars($phongKham['tenPhongKham'] ?? 'DarmaSoft Clinic', ENT_
             
             if (result.success) {
                 otpDigits.forEach(function (d) { d.value = ''; d.classList.remove('otp-digit-error'); });
-                document.getElementById('otpError').classList.add('d-none');
+                    if (otpErrorEl) {
+                        otpErrorEl.textContent = defaultOtpErrorText;
+                        otpErrorEl.classList.add('d-none');
+                    }
                 startCountdown(result.expiresIn || 300);
                 showAlert('Thành công', 'Mã OTP mới đã được gửi', 'success');
             } else {
@@ -449,7 +454,10 @@ $tenPK = htmlspecialchars($phongKham['tenPhongKham'] ?? 'DarmaSoft Clinic', ENT_
             document.getElementById('stepDot1').classList.remove('done');
             document.getElementById('stepDot2').classList.remove('active');
             otpDigits.forEach(function (d) { d.value = ''; d.classList.remove('otp-digit-error'); });
-            document.getElementById('otpError').classList.add('d-none');
+            if (otpErrorEl) {
+                otpErrorEl.textContent = defaultOtpErrorText;
+                otpErrorEl.classList.add('d-none');
+            }
             document.getElementById('loginPhone').value = '';
             document.getElementById('loginPhone').focus();
         });
@@ -467,12 +475,18 @@ $tenPK = htmlspecialchars($phongKham['tenPhongKham'] ?? 'DarmaSoft Clinic', ENT_
 
             if (code.length < 6) {
                 otpDigits.forEach(function (d) { if (!d.value) d.classList.add('otp-digit-error'); });
-                document.getElementById('otpError').classList.remove('d-none');
+                if (otpErrorEl) {
+                    otpErrorEl.textContent = 'Vui lòng nhập đầy đủ mã OTP.';
+                    otpErrorEl.classList.remove('d-none');
+                }
                 return;
             }
 
             otpDigits.forEach(function (d) { d.classList.remove('otp-digit-error'); });
-            document.getElementById('otpError').classList.add('d-none');
+            if (otpErrorEl) {
+                otpErrorEl.textContent = defaultOtpErrorText;
+                otpErrorEl.classList.add('d-none');
+            }
 
             var btn = document.getElementById('btnConfirmOtp');
             btn.disabled = true;
@@ -500,7 +514,10 @@ $tenPK = htmlspecialchars($phongKham['tenPhongKham'] ?? 'DarmaSoft Clinic', ENT_
                     otpDigits.forEach(function(d) { d.classList.add('otp-digit-error'); });
                 }
                 
-                document.getElementById('otpError').classList.remove('d-none');
+                if (otpErrorEl) {
+                    otpErrorEl.textContent = result.message || defaultOtpErrorText;
+                    otpErrorEl.classList.remove('d-none');
+                }
                 showAlert('Lỗi', result.message || 'Xác thực thất bại', 'danger');
             }
         });

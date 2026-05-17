@@ -16,9 +16,132 @@ use App\Controllers\ApiController;
 use App\Core\Auth;
 use App\Core\Database;
 use App\Models\ThongTinPhongKham;
+use App\Models\LichHen;
 
 class BookingController extends ApiController
 {
+    private function timeToMinutes(string $time): int
+    {
+        $parts = explode(':', $time);
+        return ((int)($parts[0] ?? 0) * 60) + (int)($parts[1] ?? 0);
+    }
+
+    private function formatSlotLabel(int $minutes): string
+    {
+        $value = sprintf('%02d:%02d', intdiv($minutes, 60), $minutes % 60);
+        return $value . (intdiv($minutes, 60) < 12 ? ' sáng' : ' chiều');
+    }
+
+    private function getClinicSlotBounds(): array
+    {
+        $pkModel = new ThongTinPhongKham();
+        $pkInfo = $pkModel->getInfo();
+
+        $openMin = $this->timeToMinutes($pkInfo['GioMoCua'] ?? '08:00:00');
+        $closeMin = $this->timeToMinutes($pkInfo['GioDongCua'] ?? '17:00:00');
+
+        return [$openMin, $closeMin - 60];
+    }
+
+    private function getDoctorShiftRanges(int $maNguoiDung, string $ngay): array
+    {
+        $shifts = Database::fetchAll(
+            "SELECT c.MaCa, c.TenCa, c.GioBatDau, c.GioKetThuc
+             FROM PhanCongCa pc
+             INNER JOIN CaLamViec c ON pc.MaCa = c.MaCa
+             WHERE pc.MaNguoiDung = ? AND pc.NgayLamViec = ?
+             ORDER BY c.GioBatDau",
+            [$maNguoiDung, $ngay]
+        );
+
+        return array_map(function (array $shift): array {
+            return [
+                'maCa' => (int)($shift['MaCa'] ?? 0),
+                'tenCa' => $shift['TenCa'] ?? '',
+                'gioBatDau' => substr((string)($shift['GioBatDau'] ?? ''), 0, 5),
+                'gioKetThuc' => substr((string)($shift['GioKetThuc'] ?? ''), 0, 5),
+                'startMin' => $this->timeToMinutes((string)($shift['GioBatDau'] ?? '00:00:00')),
+                'endMin' => $this->timeToMinutes((string)($shift['GioKetThuc'] ?? '00:00:00')),
+            ];
+        }, $shifts);
+    }
+
+    private function getBookedSlotTimes(int $maNguoiDung, string $ngay): array
+    {
+        $bookedRows = Database::fetchAll(
+            "SELECT CONVERT(VARCHAR(5), ThoiGianHen, 108) AS GioHen
+             FROM LichHen
+             WHERE MaNguoiDung = ?
+               AND CAST(ThoiGianHen AS DATE) = ?
+               AND TrangThai IN (0, 1)",
+            [$maNguoiDung, $ngay]
+        );
+
+        $booked = [];
+        foreach ($bookedRows as $row) {
+            if (!empty($row['GioHen'])) {
+                $booked[(string)$row['GioHen']] = true;
+            }
+        }
+
+        return $booked;
+    }
+
+    private function getAvailableSlotsForDoctor(int $maNguoiDung, string $ngay): array
+    {
+        [$clinicOpenMin, $clinicLastSlotMin] = $this->getClinicSlotBounds();
+        $shiftRanges = $this->getDoctorShiftRanges($maNguoiDung, $ngay);
+        $bookedSlots = $this->getBookedSlotTimes($maNguoiDung, $ngay);
+        $slots = [];
+
+        $today = (new \DateTime())->format('Y-m-d');
+        $currentMin = null;
+        if ($ngay === $today) {
+            $now = new \DateTime();
+            $currentMin = ((int)$now->format('H') * 60) + (int)$now->format('i');
+        }
+
+        foreach ($shiftRanges as $shift) {
+            $startMin = max($clinicOpenMin, (int)$shift['startMin']);
+            $lastSlotMin = min($clinicLastSlotMin, (int)$shift['endMin'] - 60);
+
+            for ($minutes = $startMin; $minutes <= $lastSlotMin; $minutes += 30) {
+                if ($minutes >= 720 && $minutes < 780) {
+                    continue;
+                }
+
+                if ($currentMin !== null && $minutes <= $currentMin) {
+                    continue;
+                }
+
+                $value = sprintf('%02d:%02d', intdiv($minutes, 60), $minutes % 60);
+                if (isset($bookedSlots[$value]) || isset($slots[$value])) {
+                    continue;
+                }
+
+                $slots[$value] = [
+                    'value' => $value,
+                    'label' => $this->formatSlotLabel($minutes),
+                    'caLam' => $shift['tenCa'],
+                ];
+            }
+        }
+
+        ksort($slots);
+        return array_values($slots);
+    }
+
+    private function isDoctorSlotAvailable(int $maNguoiDung, string $ngay, string $gioHen): bool
+    {
+        foreach ($this->getAvailableSlotsForDoctor($maNguoiDung, $ngay) as $slot) {
+            if (($slot['value'] ?? null) === $gioHen) {
+                return true;
+            }
+        }
+
+        return false;
+    }
+
     /**
      * POST /api/booking/create
      * Body: { hoTen, soDienThoai, thoiGianHen (Y-m-d H:i), ghiChu? }
@@ -102,15 +225,7 @@ class BookingController extends ApiController
         }
 
         // Validate giờ hẹn theo khung giờ hoạt động phòng khám (trước giờ đóng cửa 1 tiếng)
-        $pkModel = new ThongTinPhongKham();
-        $pkInfo = $pkModel->getInfo();
-        $openTime = $pkInfo['GioMoCua'] ?? '08:00:00';
-        $closeTime = $pkInfo['GioDongCua'] ?? '17:00:00';
-        $openParts = explode(':', $openTime);
-        $closeParts = explode(':', $closeTime);
-        $openMin = (int)$openParts[0] * 60 + (int)($openParts[1] ?? 0);
-        $closeMin = (int)$closeParts[0] * 60 + (int)($closeParts[1] ?? 0);
-        $lastSlotMin = $closeMin - 60; // trước 1 tiếng
+        [$openMin, $lastSlotMin] = $this->getClinicSlotBounds();
 
         $henH = (int)$dt->format('H');
         $henM = (int)$dt->format('i');
@@ -146,20 +261,24 @@ class BookingController extends ApiController
                 return;
             }
 
-            // Validate bác sĩ có ca làm việc trong ngày đã chọn
-            $shift = Database::fetchOne(
-                "SELECT pc.MaCa FROM PhanCongCa pc WHERE pc.MaNguoiDung = ? AND pc.NgayLamViec = ?",
-                [$maNguoiDung, $dt->format('Y-m-d')]
-            );
-            if (!$shift) {
+            $ngayHen = $dt->format('Y-m-d');
+            $gioHen = $dt->format('H:i');
+            $shiftRanges = $this->getDoctorShiftRanges($maNguoiDung, $ngayHen);
+
+            if (empty($shiftRanges)) {
                 $this->error('Bác sĩ này không có ca làm việc vào ngày đã chọn.', null, 400);
+                return;
+            }
+
+            if (!$this->isDoctorSlotAvailable($maNguoiDung, $ngayHen, $gioHen)) {
+                $this->error('Khung giờ đã chọn không thuộc ca làm việc khả dụng của bác sĩ hoặc đã được đặt.', null, 400);
                 return;
             }
 
             // Giới hạn 8 bệnh nhân / bác sĩ / ngày
             $bnCount = Database::fetchOne(
                 "SELECT COUNT(*) AS cnt FROM LichHen WHERE MaNguoiDung = ? AND CAST(ThoiGianHen AS DATE) = ? AND TrangThai IN (0, 1)",
-                [$maNguoiDung, $dt->format('Y-m-d')]
+                [$maNguoiDung, $ngayHen]
             );
             if ($bnCount && (int)$bnCount['cnt'] >= 8) {
                 $this->error('Bác sĩ đã đầy lịch trong ngày này (tối đa 8 bệnh nhân). Vui lòng chọn bác sĩ khác.', null, 400);
@@ -167,18 +286,8 @@ class BookingController extends ApiController
             }
         }
 
-        // Tự động hủy lịch hẹn chưa xác nhận (TrangThai=0) đã qua ngày
-        try {
-            Database::query(
-                "UPDATE LichHen SET TrangThai = 3
-                 WHERE TrangThai = 0
-                   AND MaBenhNhan IN (SELECT bn.MaBenhNhan FROM BenhNhan bn WHERE bn.SoDienThoai = ?)
-                   AND CAST(ThoiGianHen AS DATE) < CAST(GETDATE() AS DATE)",
-                [$phone]
-            );
-        } catch (\Exception $e) {
-            error_log('Lỗi tự động hủy lịch hẹn quá hạn: ' . $e->getMessage());
-        }
+        // Tự động hủy toàn hệ thống lịch hẹn chưa xác nhận đã quá giờ hẹn
+        LichHen::autoExpireOverdue();
 
         // Rate limit: tối đa 5 lịch hẹn đang chờ xử lý / SĐT (chỉ đếm tương lai)
         try {
@@ -187,7 +296,7 @@ class BookingController extends ApiController
                  FROM LichHen lh
                  JOIN BenhNhan bn ON lh.MaBenhNhan = bn.MaBenhNhan
                  WHERE bn.SoDienThoai = ? AND lh.TrangThai IN (0, 1)
-                   AND CAST(lh.ThoiGianHen AS DATE) >= CAST(GETDATE() AS DATE)",
+                   AND lh.ThoiGianHen > GETDATE()",
                 [$phone]
             );
             if ($pendingCount && (int)$pendingCount['cnt'] >= 5) {
@@ -229,6 +338,15 @@ class BookingController extends ApiController
                 ]
             );
 
+            // Gửi email xác nhận cho user đã đăng nhập (best-effort, không chặn response nếu fail)
+            $this->sendBookingConfirmationEmail(
+                $currentUser,
+                $result['MaLichHen'] ?? null,
+                $dt,
+                $maNguoiDung,
+                $ghiChu
+            );
+
             $this->success([
                 'maLichHen'  => $result['MaLichHen']  ?? null,
                 'maBenhNhan' => $result['MaBenhNhan'] ?? null,
@@ -242,8 +360,120 @@ class BookingController extends ApiController
     }
 
     /**
+     * Gửi email xác nhận đặt lịch (best-effort).
+     * Chỉ gửi nếu user đã đăng nhập và có email. Fail im lặng, log lỗi.
+     */
+    private function sendBookingConfirmationEmail(
+        ?array $currentUser,
+        $maLichHen,
+        \DateTime $dt,
+        ?int $maNguoiDungBacSi,
+        ?string $ghiChu
+    ): void {
+        try {
+            if (!$currentUser || empty($currentUser['Email']) || empty($maLichHen)) {
+                return;
+            }
+
+            // Lấy tên bác sĩ nếu có chọn
+            $tenBacSi = null;
+            if ($maNguoiDungBacSi) {
+                $bs = Database::fetchOne(
+                    "SELECT HoTen FROM NguoiDung WHERE MaNguoiDung = ?",
+                    [$maNguoiDungBacSi]
+                );
+                $tenBacSi = $bs['HoTen'] ?? null;
+            }
+
+            $emailService = $this->getEmailService();
+            if (!$emailService) {
+                error_log('BookingController: không khởi tạo được EmailService — bỏ qua gửi xác nhận.');
+                return;
+            }
+
+            $emailService->sendBookingConfirmation([
+                'to'          => $currentUser['Email'],
+                'hoTen'       => $currentUser['HoTen'] ?? 'Khách hàng',
+                'maLichHen'   => $maLichHen,
+                'thoiGianHen' => $dt->format('d/m/Y H:i'),
+                'tenBacSi'    => $tenBacSi,
+                'ghiChu'      => $ghiChu,
+                'clinic'      => $this->getClinicInfoForEmail(),
+            ]);
+        } catch (\Throwable $e) {
+            error_log('Lỗi gửi email xác nhận đặt lịch: ' . $e->getMessage());
+        }
+    }
+
+    /**
+     * Lấy thông tin phòng khám thực từ bảng ThongTinPhongKham để dùng trong email.
+     * Trả mảng rỗng nếu không có / lỗi → template sẽ fallback về config.
+     */
+    private function getClinicInfoForEmail(): array
+    {
+        try {
+            $info = (new ThongTinPhongKham())->getInfo();
+            if (!$info) {
+                return [];
+            }
+            return [
+                'name'    => $info['TenPhongKham'] ?? null,
+                'address' => $info['DiaChi'] ?? null,
+                'phone'   => $info['SoDienThoai'] ?? null,
+                'email'   => $info['Email'] ?? null,
+                'website' => $info['Website'] ?? null,
+            ];
+        } catch (\Throwable $e) {
+            error_log('Lỗi lấy ThongTinPhongKham cho email: ' . $e->getMessage());
+            return [];
+        }
+    }
+
+    /**
+     * Khởi tạo EmailService lazy. Trả về null nếu lỗi.
+     */
+    private $emailService = null;
+    private function getEmailService()
+    {
+        if ($this->emailService !== null) {
+            return $this->emailService ?: null;
+        }
+        try {
+            $email_config_path = __DIR__ . '/../../Config/email_config.php';
+            if (!file_exists($email_config_path)) {
+                error_log("Không tìm thấy email_config.php tại: $email_config_path");
+                $this->emailService = false;
+                return null;
+            }
+            require_once $email_config_path;
+
+            $email_service_path = __DIR__ . '/../../Services/EmailService.php';
+            if (!file_exists($email_service_path)) {
+                error_log("Không tìm thấy EmailService.php tại: $email_service_path");
+                $this->emailService = false;
+                return null;
+            }
+            require_once $email_service_path;
+
+            if (!isset($EMAIL_CONFIG) || empty($EMAIL_CONFIG)) {
+                error_log('$EMAIL_CONFIG không được định nghĩa trong email_config.php');
+                $this->emailService = false;
+                return null;
+            }
+
+            $this->emailService = new \EmailService($EMAIL_CONFIG);
+            return $this->emailService;
+        } catch (\Throwable $e) {
+            error_log('Lỗi khởi tạo EmailService trong BookingController: ' . $e->getMessage());
+            $this->emailService = false;
+            return null;
+        }
+    }
+
+    /**
      * GET /api/booking/doctors?ngay=2026-04-17
-     * Trả DS bác sĩ có ca làm việc ngày đã chọn + số BN hiện tại (giới hạn 8)
+     * Trả DS toàn bộ bác sĩ có ca làm việc trong ngày + số BN hiện tại (giới hạn 8).
+     * Mỗi (bác sĩ, ca) có cờ `DaKetThuc` = true khi ca đã qua giờ hoặc đã kín slot.
      */
     public function doctors(): void
     {
@@ -253,8 +483,18 @@ class BookingController extends ApiController
             return;
         }
 
-        // Lấy bác sĩ có phân công ca trong ngày + đếm BN đã hẹn
-        $doctors = Database::fetchAll(
+        $today = (new \DateTime())->format('Y-m-d');
+        $isToday = ($ngay === $today);
+        $isPast = ($ngay < $today);
+
+        $currentTimeMin = null;
+        if ($isToday) {
+            $now = new \DateTime();
+            $currentTimeMin = ((int)$now->format('H') * 60) + (int)$now->format('i');
+        }
+
+        // Lấy toàn bộ bác sĩ có phân công ca trong ngày + đếm BN đã hẹn (theo ngày)
+        $rows = Database::fetchAll(
             "SELECT nd.MaNguoiDung, nd.HoTen,
                     c.MaCa, c.TenCa, c.GioBatDau, c.GioKetThuc,
                     ISNULL(bn_count.SoBN, 0) AS SoBN
@@ -276,6 +516,103 @@ class BookingController extends ApiController
             [$ngay, $ngay]
         );
 
-        $this->success(['doctors' => $doctors, 'gioiHanBN' => 8]);
+        [$clinicOpenMin, $clinicLastSlotMin] = $this->getClinicSlotBounds();
+        $bookedCache = [];
+
+        $doctors = [];
+        foreach ($rows as $row) {
+            $maNguoiDung = (int)$row['MaNguoiDung'];
+            $startMin = $this->timeToMinutes((string)($row['GioBatDau'] ?? '00:00:00'));
+            $endMin = $this->timeToMinutes((string)($row['GioKetThuc'] ?? '00:00:00'));
+
+            $daKetThuc = false;
+            if ($isPast) {
+                $daKetThuc = true;
+            } elseif ($isToday && $currentTimeMin !== null && $currentTimeMin >= $endMin) {
+                $daKetThuc = true;
+            } else {
+                // Kiểm tra ca có còn slot trống không
+                if (!isset($bookedCache[$maNguoiDung])) {
+                    $bookedCache[$maNguoiDung] = $this->getBookedSlotTimes($maNguoiDung, $ngay);
+                }
+                $bookedSlots = $bookedCache[$maNguoiDung];
+
+                $shiftStartMin = max($clinicOpenMin, $startMin);
+                $shiftLastSlotMin = min($clinicLastSlotMin, $endMin - 60);
+
+                $hasFree = false;
+                for ($m = $shiftStartMin; $m <= $shiftLastSlotMin; $m += 30) {
+                    if ($m >= 720 && $m < 780) {
+                        continue; // bỏ giờ nghỉ trưa 12:00-13:00
+                    }
+                    if ($currentTimeMin !== null && $m <= $currentTimeMin) {
+                        continue;
+                    }
+                    $value = sprintf('%02d:%02d', intdiv($m, 60), $m % 60);
+                    if (isset($bookedSlots[$value])) {
+                        continue;
+                    }
+                    $hasFree = true;
+                    break;
+                }
+                if (!$hasFree) {
+                    $daKetThuc = true;
+                }
+            }
+
+            $row['DaKetThuc'] = $daKetThuc;
+            $doctors[] = $row;
+        }
+
+        $this->success([
+            'doctors' => $doctors,
+            'gioiHanBN' => 8,
+            'chiCaHienTai' => false,
+        ]);
+    }
+
+    /**
+     * GET /api/booking/slots?ngay=2026-04-17&maNguoiDung=5
+     * Trả danh sách khung giờ còn trống theo ca làm của bác sĩ trong ngày
+     */
+    public function slots(): void
+    {
+        $ngay = $_GET['ngay'] ?? '';
+        $maNguoiDung = isset($_GET['maNguoiDung']) ? (int)$_GET['maNguoiDung'] : 0;
+
+        if (!preg_match('/^\d{4}-\d{2}-\d{2}$/', $ngay)) {
+            $this->error('Ngày không hợp lệ', null, 400);
+            return;
+        }
+
+        if ($maNguoiDung <= 0) {
+            $this->error('Bác sĩ không hợp lệ', null, 400);
+            return;
+        }
+
+        $doctor = Database::fetchOne(
+            "SELECT MaNguoiDung, HoTen FROM NguoiDung WHERE MaNguoiDung = ? AND MaVaiTro = 2 AND TrangThaiTK = 1 AND IsDeleted = 0",
+            [$maNguoiDung]
+        );
+
+        if (!$doctor) {
+            $this->error('Bác sĩ không hợp lệ hoặc không còn hoạt động.', null, 400);
+            return;
+        }
+
+        $shifts = $this->getDoctorShiftRanges($maNguoiDung, $ngay);
+
+        $this->success([
+            'doctor' => $doctor,
+            'shifts' => array_map(function (array $shift): array {
+                return [
+                    'maCa' => $shift['maCa'],
+                    'tenCa' => $shift['tenCa'],
+                    'gioBatDau' => $shift['gioBatDau'],
+                    'gioKetThuc' => $shift['gioKetThuc'],
+                ];
+            }, $shifts),
+            'slots' => $this->getAvailableSlotsForDoctor($maNguoiDung, $ngay),
+        ]);
     }
 }

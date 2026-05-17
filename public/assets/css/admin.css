@@ -260,9 +260,15 @@
   display: flex;
   align-items: center;
   gap: 1rem;
+  height: 100%;
+  min-height: 108px;
   transition:
     transform 0.2s,
     box-shadow 0.2s;
+}
+
+.admin-stat-card > div:last-child {
+  min-width: 0;
 }
 
 .admin-stat-card:hover {
@@ -307,9 +313,12 @@
 }
 
 .admin-stat-label {
+  display: block;
   font-size: 0.78rem;
   color: #6b7e78;
   margin-top: 2px;
+  line-height: 1.25;
+  min-height: 2.45em;
 }
 
 /* ── DATA CARD (bảng, danh sách) ────────────────────────── */

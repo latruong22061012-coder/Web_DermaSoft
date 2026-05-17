@@ -158,7 +158,12 @@ async function loginWithOtp(sodienthoai, otp) {
     const result = await response.json();
 
     if (!response.ok) {
-      throw new Error(result.message || "OTP không đúng");
+      return {
+        success: false,
+        data: result.data || null,
+        message: result.message || "OTP không đúng",
+        httpCode: response.status,
+      };
     }
 
     console.log("✅ Login successful:", result);
@@ -181,6 +186,7 @@ async function loginWithOtp(sodienthoai, otp) {
     console.error("❌ Login error:", error);
     return {
       success: false,
+      data: null,
       error: error.message,
       message: error.message,
     };

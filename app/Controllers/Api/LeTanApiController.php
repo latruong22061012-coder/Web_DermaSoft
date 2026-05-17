@@ -5,6 +5,7 @@ namespace App\Controllers\Api;
 use App\Controllers\ApiController;
 use App\Core\Auth;
 use App\Core\Database;
+use App\Models\LichHen;
 
 class LeTanApiController extends ApiController
 {
@@ -39,6 +40,7 @@ class LeTanApiController extends ApiController
     public function stats(): void
     {
         $maNguoiDung = $this->requireLeTan();
+        LichHen::autoExpireOverdue();
 
         // Lịch hẹn chờ xác nhận hôm nay
         $choXacNhan = Database::fetchOne(

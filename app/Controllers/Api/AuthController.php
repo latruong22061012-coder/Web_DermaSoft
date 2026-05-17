@@ -10,6 +10,7 @@ namespace App\Controllers\Api;
 
 use App\Controllers\ApiController;
 use App\Core\Auth;
+use App\Core\Database;
 use App\Models\User;
 
 class AuthController extends ApiController
@@ -147,6 +148,106 @@ class AuthController extends ApiController
     }
 
     /**
+     * POST /api/auth/first-login-update
+     * Đổi tên đăng nhập + mật khẩu ở lần đăng nhập đầu tiên (DoiMatKhau = 1)
+     * Yêu cầu: {current_password, new_username, new_password}
+     */
+    public function firstLoginUpdate(): void
+    {
+        Auth::startSession();
+        $user = $this->requireAuth();
+        if (!$user) return;
+
+        $roleId = (int)($user['MaVaiTro'] ?? 0);
+        if (!in_array($roleId, [1, 2, 3], true)) {
+            $this->error('Chức năng này chỉ áp dụng cho tài khoản nhân sự.', null, 403);
+            return;
+        }
+
+        if (!Auth::needsPasswordChange()) {
+            $this->error('Tài khoản này không yêu cầu đổi thông tin lần đầu.', null, 400);
+            return;
+        }
+
+        $data = $this->getJSON();
+
+        $errors = $this->validate($data, [
+            'current_password' => 'required|minlen:6',
+            'new_username'     => 'required|minlen:3',
+            'new_password'     => 'required|minlen:6',
+        ]);
+
+        if (!empty($errors)) {
+            $this->error('Dữ liệu không hợp lệ', $errors, 400);
+            return;
+        }
+
+        $currentPassword = trim((string)$data['current_password']);
+        $newUsername = trim((string)$data['new_username']);
+        $newPassword = trim((string)$data['new_password']);
+
+        if (!preg_match('/^[A-Za-z0-9._-]{3,30}$/', $newUsername)) {
+            $this->error('Tên đăng nhập chỉ được chứa chữ, số và . _ - (3-30 ký tự).', null, 400);
+            return;
+        }
+
+        if ($newPassword === $currentPassword) {
+            $this->error('Mật khẩu mới phải khác mật khẩu hiện tại.', null, 400);
+            return;
+        }
+
+        $dbUser = User::findById((int)$user['MaNguoiDung']);
+        if (!$dbUser) {
+            $this->error('Không tìm thấy tài khoản.', null, 404);
+            return;
+        }
+
+        if (!password_verify($currentPassword, (string)$dbUser['MatKhau'])) {
+            $this->error('Mật khẩu hiện tại không đúng.', null, 401);
+            return;
+        }
+
+        $usernameExists = Database::fetchOne(
+            "SELECT TOP 1 MaNguoiDung FROM NguoiDung WHERE TenDangNhap = ? AND MaNguoiDung <> ?",
+            [$newUsername, (int)$user['MaNguoiDung']]
+        );
+        if ($usernameExists) {
+            $this->error('Tên đăng nhập đã tồn tại. Vui lòng chọn tên khác.', null, 409);
+            return;
+        }
+
+        $updated = User::updateInfo((int)$user['MaNguoiDung'], [
+            'TenDangNhap' => $newUsername,
+            'MatKhau' => password_hash($newPassword, PASSWORD_DEFAULT),
+            'DoiMatKhau' => 0,
+        ]);
+
+        if (!$updated) {
+            $this->internalError('Không thể cập nhật thông tin đăng nhập.');
+            return;
+        }
+
+        // Đồng bộ lại session hiện tại để phản ánh dữ liệu mới.
+        $_SESSION['authenticated_user']['TenDangNhap'] = $newUsername;
+        $_SESSION['authenticated_user']['DoiMatKhau'] = 0;
+
+        $redirectRoute = 'profile';
+        $roleId = (int)($user['MaVaiTro'] ?? 0);
+        if ($roleId === 1) {
+            $redirectRoute = 'admin/dashboard';
+        } elseif ($roleId === 2) {
+            $redirectRoute = 'bacsi/dashboard';
+        } elseif ($roleId === 3) {
+            $redirectRoute = 'letan/dashboard';
+        }
+
+        $this->success([
+            'redirect_route' => $redirectRoute,
+            'username' => $newUsername,
+        ], 'Đổi thông tin đăng nhập thành công.');
+    }
+
+    /**
      * POST /api/verify-token
      * Xác minh token (cho Windows App)
      * Yêu cầu: {token}
@@ -218,7 +319,8 @@ class AuthController extends ApiController
             'Email' => $data['email'],
             'SoDienThoai' => $data['sodienthoai'],
             'MaVaiTro' => 4,  // Mặc định là bệnh nhân
-            'TrangThaiTK' => 1  // Kích hoạt
+            'TrangThaiTK' => 1,  // Kích hoạt
+            'DoiMatKhau' => 0
         ]);
 
         if (!$result) {
@@ -477,7 +579,8 @@ class AuthController extends ApiController
                 'Email' => $data['email'],
                 'SoDienThoai' => $data['sodienthoai'],
                 'MaVaiTro' => 4,  // Mặc định là bệnh nhân
-                'TrangThaiTK' => 1  // Kích hoạt
+                'TrangThaiTK' => 1,  // Kích hoạt
+                'DoiMatKhau' => 0
             ]);
 
             if (!$userId) {

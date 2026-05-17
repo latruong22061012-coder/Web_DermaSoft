@@ -1,0 +1,2906 @@
+{
+  "openapi": "3.0.3",
+  "info": {
+    "title": "DermaSoft API",
+    "version": "1.0.0",
+    "description": "OpenAPI 3.0 specification for DermaSoft Website API.\n\nNotes:\n- Standard envelope response: { status, message, data }\n- Primary authentication is PHP session cookie (PHPSESSID).\n- Login endpoints also return an integration token for Windows App.\n- Token is custom random token (not JWT/OAuth2).\n"
+  },
+  "servers": [
+    {
+      "url": "http://localhost/DermaSoft/api",
+      "description": "Local XAMPP"
+    },
+    {
+      "url": "/index.php?route=api",
+      "description": "Fallback route mode (without rewrite)"
+    }
+  ],
+  "tags": [
+    {
+      "name": "Auth"
+    },
+    {
+      "name": "Profile"
+    },
+    {
+      "name": "Booking"
+    },
+    {
+      "name": "LichHen"
+    },
+    {
+      "name": "PhieuKham"
+    },
+    {
+      "name": "HoaDon"
+    },
+    {
+      "name": "BenhNhan"
+    },
+    {
+      "name": "ThanhVien"
+    },
+    {
+      "name": "DanhGia"
+    },
+    {
+      "name": "Admin"
+    },
+    {
+      "name": "BacSi"
+    },
+    {
+      "name": "LeTan"
+    }
+  ],
+  "security": [
+    {
+      "sessionCookieAuth": []
+    }
+  ],
+  "paths": {
+    "/auth/login": {
+      "post": {
+        "tags": [
+          "Auth"
+        ],
+        "summary": "Login with username/password",
+        "security": [],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/LoginRequest"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Success",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "allOf": [
+                    {
+                      "$ref": "#/components/schemas/ApiEnvelope"
+                    },
+                    {
+                      "type": "object",
+                      "properties": {
+                        "data": {
+                          "$ref": "#/components/schemas/LoginResponseData"
+                        }
+                      }
+                    }
+                  ]
+                }
+              }
+            }
+          },
+          "400": {
+            "$ref": "#/components/responses/BadRequest"
+          },
+          "401": {
+            "$ref": "#/components/responses/Unauthorized"
+          }
+        }
+      }
+    },
+    "/auth/logout": {
+      "post": {
+        "tags": [
+          "Auth"
+        ],
+        "summary": "Logout current session",
+        "responses": {
+          "200": {
+            "$ref": "#/components/responses/OkNoData"
+          },
+          "401": {
+            "$ref": "#/components/responses/Unauthorized"
+          }
+        }
+      }
+    },
+    "/auth/me": {
+      "get": {
+        "tags": [
+          "Auth"
+        ],
+        "summary": "Get current user from session",
+        "responses": {
+          "200": {
+            "$ref": "#/components/responses/OkGeneric"
+          },
+          "401": {
+            "$ref": "#/components/responses/Unauthorized"
+          }
+        }
+      }
+    },
+    "/auth/register": {
+      "post": {
+        "tags": [
+          "Auth"
+        ],
+        "summary": "Register account (patient role)",
+        "security": [],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/RegisterRequest"
+              }
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "$ref": "#/components/responses/CreatedGeneric"
+          },
+          "400": {
+            "$ref": "#/components/responses/BadRequest"
+          },
+          "409": {
+            "$ref": "#/components/responses/Conflict"
+          }
+        }
+      }
+    },
+    "/auth/forgot-password": {
+      "post": {
+        "tags": [
+          "Auth"
+        ],
+        "summary": "Forgot password",
+        "security": [],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "required": [
+                  "email"
+                ],
+                "properties": {
+                  "email": {
+                    "type": "string",
+                    "format": "email"
+                  }
+                }
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "$ref": "#/components/responses/OkNoData"
+          },
+          "400": {
+            "$ref": "#/components/responses/BadRequest"
+          }
+        }
+      }
+    },
+    "/auth/change-password": {
+      "post": {
+        "tags": [
+          "Auth"
+        ],
+        "summary": "Change password",
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/ChangePasswordRequest"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "$ref": "#/components/responses/OkNoData"
+          },
+          "400": {
+            "$ref": "#/components/responses/BadRequest"
+          },
+          "401": {
+            "$ref": "#/components/responses/Unauthorized"
+          }
+        }
+      }
+    },
+    "/auth/first-login-update": {
+      "post": {
+        "tags": [
+          "Auth"
+        ],
+        "summary": "Update username/password at first login",
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/FirstLoginUpdateRequest"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "$ref": "#/components/responses/OkGeneric"
+          },
+          "400": {
+            "$ref": "#/components/responses/BadRequest"
+          },
+          "401": {
+            "$ref": "#/components/responses/Unauthorized"
+          },
+          "403": {
+            "$ref": "#/components/responses/Forbidden"
+          }
+        }
+      }
+    },
+    "/auth/verify-token": {
+      "post": {
+        "tags": [
+          "Auth"
+        ],
+        "summary": "Verify integration token for Windows App",
+        "security": [],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "required": [
+                  "token"
+                ],
+                "properties": {
+                  "token": {
+                    "type": "string"
+                  }
+                }
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "$ref": "#/components/responses/OkGeneric"
+          },
+          "400": {
+            "$ref": "#/components/responses/BadRequest"
+          },
+          "401": {
+            "$ref": "#/components/responses/Unauthorized"
+          }
+        }
+      }
+    },
+    "/auth/check-phone": {
+      "post": {
+        "tags": [
+          "Auth"
+        ],
+        "summary": "Check if phone exists",
+        "security": [],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "required": [
+                  "sodienthoai"
+                ],
+                "properties": {
+                  "sodienthoai": {
+                    "type": "string"
+                  }
+                }
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "$ref": "#/components/responses/OkGeneric"
+          }
+        }
+      }
+    },
+    "/auth/send-otp-login": {
+      "post": {
+        "tags": [
+          "Auth"
+        ],
+        "summary": "Send OTP for phone login (via email)",
+        "security": [],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "required": [
+                  "sodienthoai"
+                ],
+                "properties": {
+                  "sodienthoai": {
+                    "type": "string"
+                  }
+                }
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "$ref": "#/components/responses/OkGeneric"
+          },
+          "429": {
+            "$ref": "#/components/responses/TooManyRequests"
+          }
+        }
+      }
+    },
+    "/auth/login-with-otp": {
+      "post": {
+        "tags": [
+          "Auth"
+        ],
+        "summary": "Login with phone + OTP",
+        "security": [],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "required": [
+                  "sodienthoai",
+                  "otp"
+                ],
+                "properties": {
+                  "sodienthoai": {
+                    "type": "string"
+                  },
+                  "otp": {
+                    "type": "string",
+                    "minLength": 6,
+                    "maxLength": 6
+                  }
+                }
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "$ref": "#/components/responses/OkGeneric"
+          },
+          "401": {
+            "$ref": "#/components/responses/Unauthorized"
+          },
+          "429": {
+            "$ref": "#/components/responses/TooManyRequests"
+          }
+        }
+      }
+    },
+    "/auth/register-phone": {
+      "post": {
+        "tags": [
+          "Auth"
+        ],
+        "summary": "Register account by phone flow",
+        "security": [],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "required": [
+                  "hoTen",
+                  "sodienthoai",
+                  "email",
+                  "matkhau"
+                ],
+                "properties": {
+                  "hoTen": {
+                    "type": "string"
+                  },
+                  "sodienthoai": {
+                    "type": "string"
+                  },
+                  "email": {
+                    "type": "string",
+                    "format": "email"
+                  },
+                  "matkhau": {
+                    "type": "string",
+                    "minLength": 6
+                  }
+                }
+              }
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "$ref": "#/components/responses/CreatedGeneric"
+          },
+          "409": {
+            "$ref": "#/components/responses/Conflict"
+          }
+        }
+      }
+    },
+    "/auth/forgot-phone": {
+      "post": {
+        "tags": [
+          "Auth"
+        ],
+        "summary": "Recover phone by email",
+        "security": [],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "required": [
+                  "email"
+                ],
+                "properties": {
+                  "email": {
+                    "type": "string",
+                    "format": "email"
+                  }
+                }
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "$ref": "#/components/responses/OkGeneric"
+          }
+        }
+      }
+    },
+    "/auth/update-phone": {
+      "post": {
+        "tags": [
+          "Auth"
+        ],
+        "summary": "Update phone/email (authenticated)",
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "required": [
+                  "sodienthoai_moi",
+                  "email_moi",
+                  "otp_confirm"
+                ],
+                "properties": {
+                  "sodienthoai_moi": {
+                    "type": "string"
+                  },
+                  "email_moi": {
+                    "type": "string",
+                    "format": "email"
+                  },
+                  "otp_confirm": {
+                    "type": "string",
+                    "minLength": 6,
+                    "maxLength": 6
+                  }
+                }
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "$ref": "#/components/responses/OkNoData"
+          },
+          "401": {
+            "$ref": "#/components/responses/Unauthorized"
+          }
+        }
+      }
+    },
+    "/auth/verify-email-token": {
+      "post": {
+        "tags": [
+          "Auth"
+        ],
+        "summary": "Verify email by token",
+        "security": [],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "required": [
+                  "token"
+                ],
+                "properties": {
+                  "token": {
+                    "type": "string"
+                  }
+                }
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "$ref": "#/components/responses/OkGeneric"
+          },
+          "401": {
+            "$ref": "#/components/responses/Unauthorized"
+          }
+        }
+      }
+    },
+    "/auth/send-otp-phone-reset": {
+      "post": {
+        "tags": [
+          "Auth"
+        ],
+        "summary": "Send OTP to reset phone (no login)",
+        "security": [],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "required": [
+                  "email"
+                ],
+                "properties": {
+                  "email": {
+                    "type": "string",
+                    "format": "email"
+                  }
+                }
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "$ref": "#/components/responses/OkGeneric"
+          },
+          "429": {
+            "$ref": "#/components/responses/TooManyRequests"
+          }
+        }
+      }
+    },
+    "/auth/reset-phone-with-otp": {
+      "post": {
+        "tags": [
+          "Auth"
+        ],
+        "summary": "Reset phone using email OTP (no login)",
+        "security": [],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "required": [
+                  "email",
+                  "otp",
+                  "phone_moi"
+                ],
+                "properties": {
+                  "email": {
+                    "type": "string",
+                    "format": "email"
+                  },
+                  "otp": {
+                    "type": "string",
+                    "minLength": 6,
+                    "maxLength": 6
+                  },
+                  "phone_moi": {
+                    "type": "string"
+                  }
+                }
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "$ref": "#/components/responses/OkNoData"
+          },
+          "401": {
+            "$ref": "#/components/responses/Unauthorized"
+          },
+          "409": {
+            "$ref": "#/components/responses/Conflict"
+          }
+        }
+      }
+    },
+    "/profile/update": {
+      "post": {
+        "tags": [
+          "Profile"
+        ],
+        "summary": "Update profile info",
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "required": [
+                  "hoTen",
+                  "email"
+                ],
+                "properties": {
+                  "hoTen": {
+                    "type": "string"
+                  },
+                  "email": {
+                    "type": "string",
+                    "format": "email"
+                  }
+                }
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "$ref": "#/components/responses/OkGeneric"
+          },
+          "401": {
+            "$ref": "#/components/responses/Unauthorized"
+          },
+          "409": {
+            "$ref": "#/components/responses/Conflict"
+          }
+        }
+      }
+    },
+    "/profile/upload-avatar": {
+      "post": {
+        "tags": [
+          "Profile"
+        ],
+        "summary": "Upload avatar",
+        "requestBody": {
+          "required": true,
+          "content": {
+            "multipart/form-data": {
+              "schema": {
+                "type": "object",
+                "required": [
+                  "avatar"
+                ],
+                "properties": {
+                  "avatar": {
+                    "type": "string",
+                    "format": "binary"
+                  }
+                }
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "$ref": "#/components/responses/OkGeneric"
+          },
+          "401": {
+            "$ref": "#/components/responses/Unauthorized"
+          },
+          "413": {
+            "$ref": "#/components/responses/PayloadTooLarge"
+          }
+        }
+      }
+    },
+    "/booking/create": {
+      "post": {
+        "tags": [
+          "Booking"
+        ],
+        "summary": "Create booking from website",
+        "security": [],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "required": [
+                  "hoTen",
+                  "soDienThoai",
+                  "thoiGianHen"
+                ],
+                "properties": {
+                  "hoTen": {
+                    "type": "string"
+                  },
+                  "soDienThoai": {
+                    "type": "string"
+                  },
+                  "thoiGianHen": {
+                    "type": "string",
+                    "description": "format YYYY-MM-DD HH:mm"
+                  },
+                  "ghiChu": {
+                    "type": "string",
+                    "nullable": true
+                  },
+                  "maNguoiDung": {
+                    "type": "integer",
+                    "description": "Optional doctor id"
+                  }
+                }
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "$ref": "#/components/responses/OkGeneric"
+          },
+          "400": {
+            "$ref": "#/components/responses/BadRequest"
+          },
+          "403": {
+            "$ref": "#/components/responses/Forbidden"
+          },
+          "409": {
+            "$ref": "#/components/responses/Conflict"
+          },
+          "429": {
+            "$ref": "#/components/responses/TooManyRequests"
+          }
+        }
+      }
+    },
+    "/booking/doctors": {
+      "get": {
+        "tags": [
+          "Booking"
+        ],
+        "summary": "Get available doctors for booking UI",
+        "security": [],
+        "responses": {
+          "200": {
+            "$ref": "#/components/responses/OkGeneric"
+          }
+        }
+      }
+    },
+    "/booking/slots": {
+      "get": {
+        "tags": [
+          "Booking"
+        ],
+        "summary": "Get booking slots",
+        "security": [],
+        "parameters": [
+          {
+            "name": "ngay",
+            "in": "query",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "date"
+            }
+          },
+          {
+            "name": "maNguoiDung",
+            "in": "query",
+            "required": true,
+            "schema": {
+              "type": "integer"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "$ref": "#/components/responses/OkGeneric"
+          }
+        }
+      }
+    },
+    "/lichhens": {
+      "get": {
+        "tags": [
+          "LichHen"
+        ],
+        "summary": "List appointments",
+        "parameters": [
+          {
+            "$ref": "#/components/parameters/Page"
+          },
+          {
+            "$ref": "#/components/parameters/Limit"
+          }
+        ],
+        "responses": {
+          "200": {
+            "$ref": "#/components/responses/OkGeneric"
+          }
+        }
+      },
+      "post": {
+        "tags": [
+          "LichHen"
+        ],
+        "summary": "Create appointment",
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "required": [
+                  "ma_benhnhan",
+                  "ma_bacsi",
+                  "thoigian_hen"
+                ],
+                "properties": {
+                  "ma_benhnhan": {
+                    "type": "integer"
+                  },
+                  "ma_bacsi": {
+                    "type": "integer"
+                  },
+                  "thoigian_hen": {
+                    "type": "string"
+                  },
+                  "ghi_chu": {
+                    "type": "string"
+                  }
+                }
+              }
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "$ref": "#/components/responses/CreatedGeneric"
+          }
+        }
+      }
+    },
+    "/lichhens/{id}": {
+      "get": {
+        "tags": [
+          "LichHen"
+        ],
+        "summary": "Appointment detail",
+        "parameters": [
+          {
+            "$ref": "#/components/parameters/Id"
+          }
+        ],
+        "responses": {
+          "200": {
+            "$ref": "#/components/responses/OkGeneric"
+          }
+        }
+      },
+      "put": {
+        "tags": [
+          "LichHen"
+        ],
+        "summary": "Update appointment",
+        "parameters": [
+          {
+            "$ref": "#/components/parameters/Id"
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "additionalProperties": true
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "$ref": "#/components/responses/OkGeneric"
+          }
+        }
+      }
+    },
+    "/lichhens/patient/{id}": {
+      "get": {
+        "tags": [
+          "LichHen"
+        ],
+        "summary": "Appointments by patient",
+        "parameters": [
+          {
+            "$ref": "#/components/parameters/Id"
+          }
+        ],
+        "responses": {
+          "200": {
+            "$ref": "#/components/responses/OkGeneric"
+          }
+        }
+      }
+    },
+    "/lichhens/status/{status}": {
+      "get": {
+        "tags": [
+          "LichHen"
+        ],
+        "summary": "Appointments by status (0-3)",
+        "parameters": [
+          {
+            "name": "status",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "integer",
+              "enum": [
+                0,
+                1,
+                2,
+                3
+              ]
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "$ref": "#/components/responses/OkGeneric"
+          }
+        }
+      }
+    },
+    "/lichhens/pending": {
+      "get": {
+        "tags": [
+          "LichHen"
+        ],
+        "summary": "Pending appointments",
+        "responses": {
+          "200": {
+            "$ref": "#/components/responses/OkGeneric"
+          }
+        }
+      }
+    },
+    "/lichhens/{id}/status": {
+      "put": {
+        "tags": [
+          "LichHen"
+        ],
+        "summary": "Update appointment status",
+        "parameters": [
+          {
+            "$ref": "#/components/parameters/Id"
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "required": [
+                  "status"
+                ],
+                "properties": {
+                  "status": {
+                    "type": "integer",
+                    "enum": [
+                      0,
+                      1,
+                      2,
+                      3
+                    ]
+                  }
+                }
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "$ref": "#/components/responses/OkGeneric"
+          }
+        }
+      }
+    },
+    "/lichhens/{id}/confirm": {
+      "post": {
+        "tags": [
+          "LichHen"
+        ],
+        "summary": "Confirm appointment",
+        "parameters": [
+          {
+            "$ref": "#/components/parameters/Id"
+          }
+        ],
+        "responses": {
+          "200": {
+            "$ref": "#/components/responses/OkGeneric"
+          }
+        }
+      }
+    },
+    "/lichhens/{id}/cancel": {
+      "post": {
+        "tags": [
+          "LichHen"
+        ],
+        "summary": "Cancel appointment",
+        "parameters": [
+          {
+            "$ref": "#/components/parameters/Id"
+          }
+        ],
+        "responses": {
+          "200": {
+            "$ref": "#/components/responses/OkNoData"
+          }
+        }
+      }
+    },
+    "/phieukham": {
+      "get": {
+        "tags": [
+          "PhieuKham"
+        ],
+        "summary": "List consultation records",
+        "parameters": [
+          {
+            "$ref": "#/components/parameters/Page"
+          },
+          {
+            "$ref": "#/components/parameters/Limit"
+          }
+        ],
+        "responses": {
+          "200": {
+            "$ref": "#/components/responses/OkGeneric"
+          }
+        }
+      },
+      "post": {
+        "tags": [
+          "PhieuKham"
+        ],
+        "summary": "Create consultation record",
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "required": [
+                  "ma_benhnhan",
+                  "ma_lichhhen",
+                  "ma_bacsi"
+                ],
+                "properties": {
+                  "ma_benhnhan": {
+                    "type": "integer"
+                  },
+                  "ma_lichhhen": {
+                    "type": "integer"
+                  },
+                  "ma_bacsi": {
+                    "type": "integer"
+                  }
+                }
+              }
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "$ref": "#/components/responses/CreatedGeneric"
+          }
+        }
+      }
+    },
+    "/phieukham/{id}": {
+      "get": {
+        "tags": [
+          "PhieuKham"
+        ],
+        "summary": "Consultation record detail",
+        "parameters": [
+          {
+            "$ref": "#/components/parameters/Id"
+          }
+        ],
+        "responses": {
+          "200": {
+            "$ref": "#/components/responses/OkGeneric"
+          }
+        }
+      },
+      "put": {
+        "tags": [
+          "PhieuKham"
+        ],
+        "summary": "Update consultation result",
+        "parameters": [
+          {
+            "$ref": "#/components/parameters/Id"
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "properties": {
+                  "trieuchung": {
+                    "type": "string"
+                  },
+                  "chandoan": {
+                    "type": "string"
+                  },
+                  "ngayhen_taikham": {
+                    "type": "string",
+                    "nullable": true
+                  }
+                }
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "$ref": "#/components/responses/OkGeneric"
+          }
+        }
+      }
+    },
+    "/phieukham/patient/{id}": {
+      "get": {
+        "tags": [
+          "PhieuKham"
+        ],
+        "summary": "Records by patient",
+        "parameters": [
+          {
+            "$ref": "#/components/parameters/Id"
+          }
+        ],
+        "responses": {
+          "200": {
+            "$ref": "#/components/responses/OkGeneric"
+          }
+        }
+      }
+    },
+    "/phieukham/appointment/{id}": {
+      "get": {
+        "tags": [
+          "PhieuKham"
+        ],
+        "summary": "Record by appointment",
+        "parameters": [
+          {
+            "$ref": "#/components/parameters/Id"
+          }
+        ],
+        "responses": {
+          "200": {
+            "$ref": "#/components/responses/OkGeneric"
+          }
+        }
+      }
+    },
+    "/phieukham/{id}/services": {
+      "get": {
+        "tags": [
+          "PhieuKham"
+        ],
+        "summary": "Get services in record",
+        "parameters": [
+          {
+            "$ref": "#/components/parameters/Id"
+          }
+        ],
+        "responses": {
+          "200": {
+            "$ref": "#/components/responses/OkGeneric"
+          }
+        }
+      },
+      "put": {
+        "tags": [
+          "PhieuKham"
+        ],
+        "summary": "Add services to record",
+        "parameters": [
+          {
+            "$ref": "#/components/parameters/Id"
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "required": [
+                  "services"
+                ],
+                "properties": {
+                  "services": {
+                    "type": "array",
+                    "items": {
+                      "type": "object",
+                      "properties": {
+                        "ma_dichvu": {
+                          "type": "integer"
+                        },
+                        "soluong": {
+                          "type": "number"
+                        },
+                        "thanhtien": {
+                          "type": "number"
+                        }
+                      }
+                    }
+                  }
+                }
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "$ref": "#/components/responses/OkGeneric"
+          }
+        }
+      }
+    },
+    "/phieukham/{id}/medicines": {
+      "get": {
+        "tags": [
+          "PhieuKham"
+        ],
+        "summary": "Get medicines in record",
+        "parameters": [
+          {
+            "$ref": "#/components/parameters/Id"
+          }
+        ],
+        "responses": {
+          "200": {
+            "$ref": "#/components/responses/OkGeneric"
+          }
+        }
+      }
+    },
+    "/hoadon": {
+      "get": {
+        "tags": [
+          "HoaDon"
+        ],
+        "summary": "List invoices",
+        "parameters": [
+          {
+            "$ref": "#/components/parameters/Page"
+          },
+          {
+            "$ref": "#/components/parameters/Limit"
+          }
+        ],
+        "responses": {
+          "200": {
+            "$ref": "#/components/responses/OkGeneric"
+          }
+        }
+      },
+      "post": {
+        "tags": [
+          "HoaDon"
+        ],
+        "summary": "Create invoice",
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "required": [
+                  "ma_phieukham",
+                  "ma_benhnhan",
+                  "ma_bacsi",
+                  "tongtien"
+                ],
+                "properties": {
+                  "ma_phieukham": {
+                    "type": "integer"
+                  },
+                  "ma_benhnhan": {
+                    "type": "integer"
+                  },
+                  "ma_bacsi": {
+                    "type": "integer"
+                  },
+                  "tongtien": {
+                    "type": "number"
+                  },
+                  "tienkhachtra": {
+                    "type": "number"
+                  }
+                }
+              }
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "$ref": "#/components/responses/CreatedGeneric"
+          }
+        }
+      }
+    },
+    "/hoadon/{id}": {
+      "get": {
+        "tags": [
+          "HoaDon"
+        ],
+        "summary": "Invoice detail",
+        "parameters": [
+          {
+            "$ref": "#/components/parameters/Id"
+          }
+        ],
+        "responses": {
+          "200": {
+            "$ref": "#/components/responses/OkGeneric"
+          }
+        }
+      },
+      "delete": {
+        "tags": [
+          "HoaDon"
+        ],
+        "summary": "Delete invoice (admin)",
+        "parameters": [
+          {
+            "$ref": "#/components/parameters/Id"
+          }
+        ],
+        "responses": {
+          "200": {
+            "$ref": "#/components/responses/OkNoData"
+          }
+        }
+      }
+    },
+    "/hoadon/patient/{id}": {
+      "get": {
+        "tags": [
+          "HoaDon"
+        ],
+        "summary": "Invoices by patient",
+        "parameters": [
+          {
+            "$ref": "#/components/parameters/Id"
+          }
+        ],
+        "responses": {
+          "200": {
+            "$ref": "#/components/responses/OkGeneric"
+          }
+        }
+      }
+    },
+    "/hoadon/unpaid": {
+      "get": {
+        "tags": [
+          "HoaDon"
+        ],
+        "summary": "Unpaid invoices",
+        "responses": {
+          "200": {
+            "$ref": "#/components/responses/OkGeneric"
+          }
+        }
+      }
+    },
+    "/hoadon/paid": {
+      "get": {
+        "tags": [
+          "HoaDon"
+        ],
+        "summary": "Paid invoices",
+        "responses": {
+          "200": {
+            "$ref": "#/components/responses/OkGeneric"
+          }
+        }
+      }
+    },
+    "/hoadon/{id}/payment": {
+      "put": {
+        "tags": [
+          "HoaDon"
+        ],
+        "summary": "Update invoice payment",
+        "parameters": [
+          {
+            "$ref": "#/components/parameters/Id"
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "required": [
+                  "sotienphat"
+                ],
+                "properties": {
+                  "sotienphat": {
+                    "type": "number"
+                  },
+                  "phuongthuc": {
+                    "type": "string"
+                  },
+                  "ghichu": {
+                    "type": "string"
+                  }
+                }
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "$ref": "#/components/responses/OkGeneric"
+          }
+        }
+      }
+    },
+    "/benhnhan": {
+      "get": {
+        "tags": [
+          "BenhNhan"
+        ],
+        "summary": "List patients",
+        "parameters": [
+          {
+            "$ref": "#/components/parameters/Page"
+          },
+          {
+            "$ref": "#/components/parameters/Limit"
+          }
+        ],
+        "responses": {
+          "200": {
+            "$ref": "#/components/responses/OkGeneric"
+          }
+        }
+      },
+      "post": {
+        "tags": [
+          "BenhNhan"
+        ],
+        "summary": "Create patient",
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "required": [
+                  "hoten",
+                  "ngaysinh",
+                  "sodienthoai"
+                ],
+                "properties": {
+                  "hoten": {
+                    "type": "string"
+                  },
+                  "ngaysinh": {
+                    "type": "string"
+                  },
+                  "gioitinh": {
+                    "type": "string"
+                  },
+                  "diachi": {
+                    "type": "string"
+                  },
+                  "sodienthoai": {
+                    "type": "string"
+                  },
+                  "email": {
+                    "type": "string",
+                    "format": "email"
+                  }
+                }
+              }
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "$ref": "#/components/responses/CreatedGeneric"
+          }
+        }
+      }
+    },
+    "/benhnhan/{id}": {
+      "get": {
+        "tags": [
+          "BenhNhan"
+        ],
+        "summary": "Patient detail",
+        "parameters": [
+          {
+            "$ref": "#/components/parameters/Id"
+          }
+        ],
+        "responses": {
+          "200": {
+            "$ref": "#/components/responses/OkGeneric"
+          }
+        }
+      },
+      "put": {
+        "tags": [
+          "BenhNhan"
+        ],
+        "summary": "Update patient",
+        "parameters": [
+          {
+            "$ref": "#/components/parameters/Id"
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "additionalProperties": true
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "$ref": "#/components/responses/OkGeneric"
+          }
+        }
+      },
+      "delete": {
+        "tags": [
+          "BenhNhan"
+        ],
+        "summary": "Delete patient (admin)",
+        "parameters": [
+          {
+            "$ref": "#/components/parameters/Id"
+          }
+        ],
+        "responses": {
+          "200": {
+            "$ref": "#/components/responses/OkNoData"
+          }
+        }
+      }
+    },
+    "/benhnhan/search": {
+      "get": {
+        "tags": [
+          "BenhNhan"
+        ],
+        "summary": "Search patients",
+        "parameters": [
+          {
+            "name": "q",
+            "in": "query",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "$ref": "#/components/responses/OkGeneric"
+          }
+        }
+      }
+    },
+    "/benhnhan/phone/{phone}": {
+      "get": {
+        "tags": [
+          "BenhNhan"
+        ],
+        "summary": "Get patient by phone",
+        "parameters": [
+          {
+            "name": "phone",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "$ref": "#/components/responses/OkGeneric"
+          }
+        }
+      }
+    },
+    "/thanh-vien": {
+      "get": {
+        "tags": [
+          "ThanhVien"
+        ],
+        "summary": "List member loyalty info",
+        "parameters": [
+          {
+            "$ref": "#/components/parameters/Page"
+          },
+          {
+            "$ref": "#/components/parameters/Limit"
+          }
+        ],
+        "responses": {
+          "200": {
+            "$ref": "#/components/responses/OkGeneric"
+          }
+        }
+      },
+      "post": {
+        "tags": [
+          "ThanhVien"
+        ],
+        "summary": "Create member loyalty record",
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "required": [
+                  "ma_benhnhan"
+                ],
+                "properties": {
+                  "ma_benhnhan": {
+                    "type": "integer"
+                  }
+                }
+              }
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "$ref": "#/components/responses/CreatedGeneric"
+          }
+        }
+      }
+    },
+    "/thanh-vien/{id}": {
+      "get": {
+        "tags": [
+          "ThanhVien"
+        ],
+        "summary": "Member detail",
+        "parameters": [
+          {
+            "$ref": "#/components/parameters/Id"
+          }
+        ],
+        "responses": {
+          "200": {
+            "$ref": "#/components/responses/OkGeneric"
+          }
+        }
+      },
+      "put": {
+        "tags": [
+          "ThanhVien"
+        ],
+        "summary": "Update member",
+        "parameters": [
+          {
+            "$ref": "#/components/parameters/Id"
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "additionalProperties": true
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "$ref": "#/components/responses/OkGeneric"
+          }
+        }
+      },
+      "delete": {
+        "tags": [
+          "ThanhVien"
+        ],
+        "summary": "Delete member (admin)",
+        "parameters": [
+          {
+            "$ref": "#/components/parameters/Id"
+          }
+        ],
+        "responses": {
+          "200": {
+            "$ref": "#/components/responses/OkNoData"
+          }
+        }
+      }
+    },
+    "/thanh-vien/patient/{id}": {
+      "get": {
+        "tags": [
+          "ThanhVien"
+        ],
+        "summary": "Member by patient id",
+        "parameters": [
+          {
+            "$ref": "#/components/parameters/Id"
+          }
+        ],
+        "responses": {
+          "200": {
+            "$ref": "#/components/responses/OkGeneric"
+          }
+        }
+      }
+    },
+    "/thanh-vien/{id}/points": {
+      "get": {
+        "tags": [
+          "ThanhVien"
+        ],
+        "summary": "Get member points",
+        "parameters": [
+          {
+            "$ref": "#/components/parameters/Id"
+          }
+        ],
+        "responses": {
+          "200": {
+            "$ref": "#/components/responses/OkGeneric"
+          }
+        }
+      },
+      "put": {
+        "tags": [
+          "ThanhVien"
+        ],
+        "summary": "Update member points",
+        "parameters": [
+          {
+            "$ref": "#/components/parameters/Id"
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "required": [
+                  "points_add"
+                ],
+                "properties": {
+                  "points_add": {
+                    "type": "integer"
+                  },
+                  "reason": {
+                    "type": "string"
+                  }
+                }
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "$ref": "#/components/responses/OkGeneric"
+          }
+        }
+      }
+    },
+    "/danhgia": {
+      "post": {
+        "tags": [
+          "DanhGia"
+        ],
+        "summary": "Create review",
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "required": [
+                  "maPhieuKham",
+                  "diemDanh"
+                ],
+                "properties": {
+                  "maPhieuKham": {
+                    "type": "integer"
+                  },
+                  "diemDanh": {
+                    "type": "integer",
+                    "minimum": 1,
+                    "maximum": 5
+                  },
+                  "nhanXet": {
+                    "type": "string",
+                    "nullable": true
+                  }
+                }
+              }
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "$ref": "#/components/responses/CreatedNoData"
+          }
+        }
+      }
+    },
+    "/danhgia/check/{id}": {
+      "get": {
+        "tags": [
+          "DanhGia"
+        ],
+        "summary": "Check if current patient reviewed consultation",
+        "parameters": [
+          {
+            "$ref": "#/components/parameters/Id"
+          }
+        ],
+        "responses": {
+          "200": {
+            "$ref": "#/components/responses/OkGeneric"
+          }
+        }
+      }
+    },
+    "/admin/stats": {
+      "get": {
+        "tags": [
+          "Admin"
+        ],
+        "summary": "Admin dashboard stats",
+        "responses": {
+          "200": {
+            "$ref": "#/components/responses/OkGeneric"
+          }
+        }
+      }
+    },
+    "/admin/benh-nhan": {
+      "get": {
+        "tags": [
+          "Admin"
+        ],
+        "summary": "Admin list patients",
+        "parameters": [
+          {
+            "name": "q",
+            "in": "query",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "$ref": "#/components/parameters/Page"
+          },
+          {
+            "$ref": "#/components/parameters/Limit"
+          }
+        ],
+        "responses": {
+          "200": {
+            "$ref": "#/components/responses/OkGeneric"
+          }
+        }
+      }
+    },
+    "/admin/benh-nhan/{id}": {
+      "get": {
+        "tags": [
+          "Admin"
+        ],
+        "summary": "Admin patient detail",
+        "parameters": [
+          {
+            "$ref": "#/components/parameters/Id"
+          }
+        ],
+        "responses": {
+          "200": {
+            "$ref": "#/components/responses/OkGeneric"
+          }
+        }
+      },
+      "put": {
+        "tags": [
+          "Admin"
+        ],
+        "summary": "Admin update patient account fields",
+        "parameters": [
+          {
+            "$ref": "#/components/parameters/Id"
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "properties": {
+                  "HoTen": {
+                    "type": "string"
+                  },
+                  "Email": {
+                    "type": "string",
+                    "format": "email"
+                  }
+                }
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "$ref": "#/components/responses/OkNoData"
+          }
+        }
+      }
+    },
+    "/admin/toggle-status": {
+      "post": {
+        "tags": [
+          "Admin"
+        ],
+        "summary": "Toggle patient account status",
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "required": [
+                  "id",
+                  "status"
+                ],
+                "properties": {
+                  "id": {
+                    "type": "integer"
+                  },
+                  "status": {
+                    "type": "integer",
+                    "enum": [
+                      0,
+                      1
+                    ]
+                  }
+                }
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "$ref": "#/components/responses/OkNoData"
+          }
+        }
+      }
+    },
+    "/admin/reset-password": {
+      "post": {
+        "tags": [
+          "Admin"
+        ],
+        "summary": "Force password reset on next login",
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "required": [
+                  "id"
+                ],
+                "properties": {
+                  "id": {
+                    "type": "integer"
+                  }
+                }
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "$ref": "#/components/responses/OkNoData"
+          }
+        }
+      }
+    },
+    "/admin/thanh-vien": {
+      "get": {
+        "tags": [
+          "Admin"
+        ],
+        "summary": "Admin list members",
+        "parameters": [
+          {
+            "name": "q",
+            "in": "query",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "$ref": "#/components/parameters/Page"
+          },
+          {
+            "$ref": "#/components/parameters/Limit"
+          }
+        ],
+        "responses": {
+          "200": {
+            "$ref": "#/components/responses/OkGeneric"
+          }
+        }
+      }
+    },
+    "/admin/thanh-vien/{id}": {
+      "get": {
+        "tags": [
+          "Admin"
+        ],
+        "summary": "Admin member detail",
+        "parameters": [
+          {
+            "$ref": "#/components/parameters/Id"
+          }
+        ],
+        "responses": {
+          "200": {
+            "$ref": "#/components/responses/OkGeneric"
+          }
+        }
+      },
+      "put": {
+        "tags": [
+          "Admin"
+        ],
+        "summary": "Admin update member",
+        "parameters": [
+          {
+            "$ref": "#/components/parameters/Id"
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "properties": {
+                  "DiemTichLuy": {
+                    "type": "integer"
+                  },
+                  "SoLanKham": {
+                    "type": "integer"
+                  }
+                }
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "$ref": "#/components/responses/OkNoData"
+          }
+        }
+      }
+    },
+    "/admin/hang-thanh-vien": {
+      "get": {
+        "tags": [
+          "Admin"
+        ],
+        "summary": "List membership tiers",
+        "responses": {
+          "200": {
+            "$ref": "#/components/responses/OkGeneric"
+          }
+        }
+      },
+      "post": {
+        "tags": [
+          "Admin"
+        ],
+        "summary": "Create membership tier",
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "required": [
+                  "TenHang",
+                  "DiemToiThieu"
+                ],
+                "properties": {
+                  "TenHang": {
+                    "type": "string"
+                  },
+                  "DiemToiThieu": {
+                    "type": "integer"
+                  },
+                  "MauHangHex": {
+                    "type": "string"
+                  },
+                  "PhanTramGiamDuocPham": {
+                    "type": "number"
+                  },
+                  "PhanTramGiamTongHD": {
+                    "type": "number"
+                  },
+                  "GiamGiaCodinh": {
+                    "type": "number"
+                  }
+                }
+              }
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "$ref": "#/components/responses/CreatedNoData"
+          }
+        }
+      }
+    },
+    "/admin/hang-thanh-vien/{id}": {
+      "get": {
+        "tags": [
+          "Admin"
+        ],
+        "summary": "Tier detail",
+        "parameters": [
+          {
+            "$ref": "#/components/parameters/Id"
+          }
+        ],
+        "responses": {
+          "200": {
+            "$ref": "#/components/responses/OkGeneric"
+          }
+        }
+      },
+      "put": {
+        "tags": [
+          "Admin"
+        ],
+        "summary": "Update tier",
+        "parameters": [
+          {
+            "$ref": "#/components/parameters/Id"
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "additionalProperties": true
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "$ref": "#/components/responses/OkNoData"
+          }
+        }
+      },
+      "delete": {
+        "tags": [
+          "Admin"
+        ],
+        "summary": "Delete tier",
+        "parameters": [
+          {
+            "$ref": "#/components/parameters/Id"
+          }
+        ],
+        "responses": {
+          "200": {
+            "$ref": "#/components/responses/OkNoData"
+          }
+        }
+      }
+    },
+    "/admin/danh-gia": {
+      "get": {
+        "tags": [
+          "Admin"
+        ],
+        "summary": "List reviews",
+        "parameters": [
+          {
+            "name": "diem",
+            "in": "query",
+            "schema": {
+              "type": "integer",
+              "minimum": 1,
+              "maximum": 5
+            }
+          },
+          {
+            "$ref": "#/components/parameters/Page"
+          },
+          {
+            "$ref": "#/components/parameters/Limit"
+          }
+        ],
+        "responses": {
+          "200": {
+            "$ref": "#/components/responses/OkGeneric"
+          }
+        }
+      }
+    },
+    "/admin/danh-gia/{id}": {
+      "delete": {
+        "tags": [
+          "Admin"
+        ],
+        "summary": "Delete review",
+        "parameters": [
+          {
+            "$ref": "#/components/parameters/Id"
+          }
+        ],
+        "responses": {
+          "200": {
+            "$ref": "#/components/responses/OkNoData"
+          }
+        }
+      }
+    },
+    "/admin/danh-gia-stats": {
+      "get": {
+        "tags": [
+          "Admin"
+        ],
+        "summary": "Review statistics",
+        "responses": {
+          "200": {
+            "$ref": "#/components/responses/OkGeneric"
+          }
+        }
+      }
+    },
+    "/bacsi/stats": {
+      "get": {
+        "tags": [
+          "BacSi"
+        ],
+        "summary": "Doctor dashboard stats",
+        "responses": {
+          "200": {
+            "$ref": "#/components/responses/OkGeneric"
+          }
+        }
+      }
+    },
+    "/bacsi/lich-lam-viec": {
+      "get": {
+        "tags": [
+          "BacSi"
+        ],
+        "summary": "Doctor shifts",
+        "parameters": [
+          {
+            "name": "ngay",
+            "in": "query",
+            "schema": {
+              "type": "string",
+              "format": "date"
+            }
+          },
+          {
+            "name": "thang",
+            "in": "query",
+            "schema": {
+              "type": "string",
+              "example": "2026-04"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "$ref": "#/components/responses/OkGeneric"
+          }
+        }
+      }
+    },
+    "/bacsi/benh-nhan": {
+      "get": {
+        "tags": [
+          "BacSi"
+        ],
+        "summary": "Doctor patient list by date",
+        "parameters": [
+          {
+            "name": "ngay",
+            "in": "query",
+            "schema": {
+              "type": "string",
+              "format": "date"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "$ref": "#/components/responses/OkGeneric"
+          }
+        }
+      }
+    },
+    "/bacsi/luong": {
+      "get": {
+        "tags": [
+          "BacSi"
+        ],
+        "summary": "Doctor salary board",
+        "parameters": [
+          {
+            "name": "nam",
+            "in": "query",
+            "schema": {
+              "type": "integer"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "$ref": "#/components/responses/OkGeneric"
+          }
+        }
+      }
+    },
+    "/bacsi/danh-gia": {
+      "get": {
+        "tags": [
+          "BacSi"
+        ],
+        "summary": "Doctor reviews",
+        "responses": {
+          "200": {
+            "$ref": "#/components/responses/OkGeneric"
+          }
+        }
+      }
+    },
+    "/bacsi/thong-ke-bn": {
+      "get": {
+        "tags": [
+          "BacSi"
+        ],
+        "summary": "Doctor patients by month",
+        "responses": {
+          "200": {
+            "$ref": "#/components/responses/OkGeneric"
+          }
+        }
+      }
+    },
+    "/letan/stats": {
+      "get": {
+        "tags": [
+          "LeTan"
+        ],
+        "summary": "Receptionist dashboard stats",
+        "responses": {
+          "200": {
+            "$ref": "#/components/responses/OkGeneric"
+          }
+        }
+      }
+    },
+    "/letan/lich-hen": {
+      "get": {
+        "tags": [
+          "LeTan"
+        ],
+        "summary": "Receptionist appointments list",
+        "parameters": [
+          {
+            "name": "ngay",
+            "in": "query",
+            "schema": {
+              "type": "string",
+              "format": "date"
+            }
+          },
+          {
+            "name": "trangThai",
+            "in": "query",
+            "schema": {
+              "type": "integer",
+              "enum": [
+                0,
+                1,
+                2,
+                3
+              ]
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "$ref": "#/components/responses/OkGeneric"
+          }
+        }
+      }
+    },
+    "/letan/lich-lam-viec": {
+      "get": {
+        "tags": [
+          "LeTan"
+        ],
+        "summary": "Receptionist shifts",
+        "parameters": [
+          {
+            "name": "ngay",
+            "in": "query",
+            "schema": {
+              "type": "string",
+              "format": "date"
+            }
+          },
+          {
+            "name": "thang",
+            "in": "query",
+            "schema": {
+              "type": "string",
+              "example": "2026-04"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "$ref": "#/components/responses/OkGeneric"
+          }
+        }
+      }
+    },
+    "/letan/luong": {
+      "get": {
+        "tags": [
+          "LeTan"
+        ],
+        "summary": "Receptionist salary board",
+        "parameters": [
+          {
+            "name": "nam",
+            "in": "query",
+            "schema": {
+              "type": "integer"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "$ref": "#/components/responses/OkGeneric"
+          }
+        }
+      }
+    },
+    "/letan/thong-ke-lh": {
+      "get": {
+        "tags": [
+          "LeTan"
+        ],
+        "summary": "Receptionist appointment statistics",
+        "responses": {
+          "200": {
+            "$ref": "#/components/responses/OkGeneric"
+          }
+        }
+      }
+    }
+  },
+  "components": {
+    "securitySchemes": {
+      "sessionCookieAuth": {
+        "type": "apiKey",
+        "in": "cookie",
+        "name": "PHPSESSID",
+        "description": "Primary auth in this system."
+      },
+      "bearerToken": {
+        "type": "http",
+        "scheme": "bearer",
+        "bearerFormat": "CustomToken",
+        "description": "Custom integration token from /auth/login (not JWT)."
+      }
+    },
+    "parameters": {
+      "Id": {
+        "name": "id",
+        "in": "path",
+        "required": true,
+        "schema": {
+          "type": "integer"
+        }
+      },
+      "Page": {
+        "name": "page",
+        "in": "query",
+        "schema": {
+          "type": "integer",
+          "default": 1,
+          "minimum": 1
+        }
+      },
+      "Limit": {
+        "name": "limit",
+        "in": "query",
+        "schema": {
+          "type": "integer",
+          "default": 20,
+          "minimum": 1,
+          "maximum": 100
+        }
+      }
+    },
+    "schemas": {
+      "ApiEnvelope": {
+        "type": "object",
+        "required": [
+          "status",
+          "message",
+          "data"
+        ],
+        "properties": {
+          "status": {
+            "type": "integer",
+            "example": 200
+          },
+          "message": {
+            "type": "string",
+            "example": "Thành công"
+          },
+          "data": {
+            "nullable": true
+          }
+        }
+      },
+      "LoginRequest": {
+        "type": "object",
+        "required": [
+          "username",
+          "password"
+        ],
+        "properties": {
+          "username": {
+            "type": "string",
+            "minLength": 3
+          },
+          "password": {
+            "type": "string",
+            "minLength": 6
+          }
+        }
+      },
+      "LoginResponseData": {
+        "type": "object",
+        "properties": {
+          "user": {
+            "type": "object",
+            "properties": {
+              "id": {
+                "type": "integer"
+              },
+              "name": {
+                "type": "string"
+              },
+              "username": {
+                "type": "string"
+              },
+              "email": {
+                "type": "string"
+              },
+              "phone": {
+                "type": "string"
+              },
+              "role_id": {
+                "type": "integer"
+              }
+            }
+          },
+          "token": {
+            "type": "string",
+            "description": "Custom token, not JWT."
+          },
+          "need_password_change": {
+            "type": "boolean"
+          }
+        }
+      },
+      "RegisterRequest": {
+        "type": "object",
+        "required": [
+          "hoten",
+          "sodienthoai",
+          "email",
+          "tendangnhap",
+          "matkhau"
+        ],
+        "properties": {
+          "hoten": {
+            "type": "string"
+          },
+          "sodienthoai": {
+            "type": "string"
+          },
+          "email": {
+            "type": "string",
+            "format": "email"
+          },
+          "tendangnhap": {
+            "type": "string"
+          },
+          "matkhau": {
+            "type": "string",
+            "minLength": 6
+          }
+        }
+      },
+      "ChangePasswordRequest": {
+        "type": "object",
+        "required": [
+          "old_password",
+          "new_password"
+        ],
+        "properties": {
+          "old_password": {
+            "type": "string",
+            "minLength": 6
+          },
+          "new_password": {
+            "type": "string",
+            "minLength": 6
+          }
+        }
+      },
+      "FirstLoginUpdateRequest": {
+        "type": "object",
+        "required": [
+          "current_password",
+          "new_username",
+          "new_password"
+        ],
+        "properties": {
+          "current_password": {
+            "type": "string",
+            "minLength": 6
+          },
+          "new_username": {
+            "type": "string",
+            "minLength": 3
+          },
+          "new_password": {
+            "type": "string",
+            "minLength": 6
+          }
+        }
+      }
+    },
+    "responses": {
+      "OkGeneric": {
+        "description": "Success",
+        "content": {
+          "application/json": {
+            "schema": {
+              "$ref": "#/components/schemas/ApiEnvelope"
+            }
+          }
+        }
+      },
+      "OkNoData": {
+        "description": "Success with no payload",
+        "content": {
+          "application/json": {
+            "schema": {
+              "allOf": [
+                {
+                  "$ref": "#/components/schemas/ApiEnvelope"
+                },
+                {
+                  "type": "object",
+                  "properties": {
+                    "data": {
+                      "nullable": true,
+                      "example": null
+                    }
+                  }
+                }
+              ]
+            }
+          }
+        }
+      },
+      "CreatedGeneric": {
+        "description": "Created",
+        "content": {
+          "application/json": {
+            "schema": {
+              "$ref": "#/components/schemas/ApiEnvelope"
+            }
+          }
+        }
+      },
+      "CreatedNoData": {
+        "description": "Created with no data",
+        "content": {
+          "application/json": {
+            "schema": {
+              "allOf": [
+                {
+                  "$ref": "#/components/schemas/ApiEnvelope"
+                },
+                {
+                  "type": "object",
+                  "properties": {
+                    "data": {
+                      "nullable": true,
+                      "example": null
+                    }
+                  }
+                }
+              ]
+            }
+          }
+        }
+      },
+      "BadRequest": {
+        "description": "Bad request",
+        "content": {
+          "application/json": {
+            "schema": {
+              "$ref": "#/components/schemas/ApiEnvelope"
+            }
+          }
+        }
+      },
+      "Unauthorized": {
+        "description": "Unauthorized",
+        "content": {
+          "application/json": {
+            "schema": {
+              "$ref": "#/components/schemas/ApiEnvelope"
+            }
+          }
+        }
+      },
+      "Forbidden": {
+        "description": "Forbidden",
+        "content": {
+          "application/json": {
+            "schema": {
+              "$ref": "#/components/schemas/ApiEnvelope"
+            }
+          }
+        }
+      },
+      "Conflict": {
+        "description": "Conflict",
+        "content": {
+          "application/json": {
+            "schema": {
+              "$ref": "#/components/schemas/ApiEnvelope"
+            }
+          }
+        }
+      },
+      "TooManyRequests": {
+        "description": "Too many requests",
+        "content": {
+          "application/json": {
+            "schema": {
+              "$ref": "#/components/schemas/ApiEnvelope"
+            }
+          }
+        }
+      },
+      "PayloadTooLarge": {
+        "description": "Payload too large",
+        "content": {
+          "application/json": {
+            "schema": {
+              "$ref": "#/components/schemas/ApiEnvelope"
+            }
+          }
+        }
+      }
+    }
+  }
+}
